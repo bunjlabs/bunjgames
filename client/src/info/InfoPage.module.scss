@@ -1,10 +1,5 @@
-@import "src/Colors";
+@import "src/Colors.scss";
 
-:global {
-  #root {
-    position: unset;
-  }
-}
 
 body {
   background-color: $baseBackground;

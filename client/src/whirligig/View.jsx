@@ -2,10 +2,11 @@ import React, {useEffect} from "react";
 import {AudioPlayer, HowlWrapper, ImagePlayer, VideoPlayer, Loading, useGame, useAuth} from "common/Essentials";
 import {AdminAuth} from "common/Auth";
 import Whirligig from "whirligig/Whirligig";
-import styles from "whirligig/View.scss";
+import styles from "whirligig/View.module.scss";
 import {Content, ExitButton, GameView, TextContent} from "common/View";
-import {useHistory} from "react-router-dom";
-import {GiMusicalNotes} from "react-icons/all";
+import {useNavigate} from "react-router-dom";
+import {GiMusicalNotes} from "react-icons/gi";
+import {WHIRLIGIG_API} from "../index";
 
 
 const QuestionsEndMusic = {
@@ -89,6 +90,8 @@ const triggerTimerSound = (game, time) => {
             case 0:
                 Sounds.sig3.play();
                 break;
+            default:
+                break;
         }
     } else {
         switch (time) {
@@ -98,11 +101,13 @@ const triggerTimerSound = (game, time) => {
             case 0:
                 Sounds.sig3.play();
                 break;
+            default:
+                break;
         }
     }
 }
 
-const useStateContent = (game) => {
+const stateContent = (game) => {
     const onWhirligigReady = () => Music.whirligig.stop();
 
     if (isWhirligigAvailable(game)) {
@@ -130,13 +135,15 @@ const WhirligigView = () => {
             case "intro": Music.intro.play(); break;
             case "questions": Music.questions.play(); break;
             case "question_whirligig": Music.whirligig.play(); break;
-            case "question_end": {
+            case "question_end":
                 QuestionsEndMusic.music[QuestionsEndMusic.current].play();
                 QuestionsEndMusic.current = (QuestionsEndMusic.current + 1) % QuestionsEndMusic.music.length;
-            } break;
-            case "end": {
+                break;
+            case "end":
                 Music.end.play();
-            } break;
+                break;
+            default:
+                break;
         }
     }, (message) => {
         switch (message) {
@@ -145,6 +152,8 @@ const WhirligigView = () => {
                 break;
             case "sound_stop":
                 resetSounds();
+                break;
+            default:
                 break;
         }
     });
@@ -172,10 +181,10 @@ const WhirligigView = () => {
 
     const [connected, setConnected] = useAuth(WHIRLIGIG_API);
 
-    const history = useHistory();
+    const navigate = useNavigate();
     const onLogout = () => {
         WHIRLIGIG_API.logout();
-        history.push("/admin");
+        navigate("/admin");
     };
 
     if (!connected) return <AdminAuth api={WHIRLIGIG_API} setConnected={setConnected}/>;
@@ -183,7 +192,7 @@ const WhirligigView = () => {
 
     return <GameView>
         <ExitButton onClick={onLogout}/>
-        <Content>{useStateContent(game)}</Content>
+        <Content>{stateContent(game)}</Content>
     </GameView>
 }
 

@@ -1,4 +1,4 @@
-import GameApi from "../GameApi.js";
+import GameApi from "../gameApi.js";
 
 const WHIRLIGIG_TOKEN = "WHIRLIGIG_TOKEN";
 

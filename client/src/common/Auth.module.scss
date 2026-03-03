@@ -1,4 +1,4 @@
-@import "src/common/Essentials";
+@import "src/common/Essentials.module";
 
 
 .auth {
@@ -12,9 +12,6 @@
 }
 
 .form {
-  div {
-    width: 100%;
-  }
   width: 100%;
   max-width: 500px;
   background-color: #31495e;
@@ -36,6 +33,7 @@
     display: block;
 
     width: 100%;
+    box-sizing: border-box;
     padding: 10px;
     font-size: 18px;
     font-weight: bold;

@@ -1,5 +1,5 @@
 import React from "react";
-import {useHistory} from "react-router-dom";
+import {useNavigate} from "react-router-dom";
 
 import {
     useGame,
@@ -18,7 +18,9 @@ import {AdminAuth} from "common/Auth";
 import FinalQuestions from "weakest/FinalQuestions";
 
 import styles from "weakest/Admin.scss";
-import {FaVolumeMute} from "react-icons/all";
+import {FaVolumeMute} from "react-icons/fa";
+import {WEAKEST_API} from "../index";
+import classNames from "classnames";
 
 
 const getStatusName = (status) => {
@@ -41,6 +43,8 @@ const getStatusName = (status) => {
             return "Final questions";
         case 'end':
             return "Game over";
+        default:
+            return ""
     }
 }
 
@@ -86,7 +90,7 @@ const WeakestContent = ({game}) => {
 const Players = ({game}) => {
     return <VerticalList className={styles.players}>
         {game.players.map(player =>
-            <ListItem key={player.id} className={css(
+            <ListItem key={player.id} className={classNames(
                 styles.player,
                 player.id === game.answerer && styles.selected,
                 player.is_weak && styles.weak
@@ -100,7 +104,7 @@ const Players = ({game}) => {
 const ScoreList = ({game}) => {
     const scores = [1, 2, 5, 10, 15, 20, 30, 40].reverse();
     return <VerticalList className={styles.scores}>
-        {scores.map(score => <ListItem key={score} className={css(
+        {scores.map(score => <ListItem key={score} className={classNames(
             styles.score,
             game.state === "questions" && game.tmp_score === score && styles.selected
         )}>
@@ -109,7 +113,7 @@ const ScoreList = ({game}) => {
     </VerticalList>
 }
 
-const useStateContent = (game) => {
+const stateContent = (game) => {
     switch (game.state) {
         case "intro":
             return <TextContent>Intro</TextContent>;
@@ -126,11 +130,12 @@ const useStateContent = (game) => {
             return <TextContent>Choose player to start</TextContent>;
         case "end":
             return <TextContent>Game over</TextContent>;
+        default:
+            return "";
     }
-    return "";
 };
 
-const useControl = (game) => {
+const control = (game) => {
     const onNextClick = () => WEAKEST_API.next_state(game.state);
     const onAnswerClick = (isCorrect) => WEAKEST_API.answer_correct(isCorrect);
     const onBankClick = () => WEAKEST_API.save_bank();
@@ -164,12 +169,12 @@ const useControl = (game) => {
 const WeakestAdmin = () => {
     const game = useGame(WEAKEST_API, (_) => {}, (_) => {});
     const [connected, setConnected] = useAuth(WEAKEST_API);
-    const history = useHistory();
+    const navigate = useNavigate();
 
     const onSoundStop = () => WEAKEST_API.intercom("sound_stop");
     const onLogout = () => {
         WEAKEST_API.logout();
-        history.push("/admin");
+        navigate("/admin");
     };
 
     if (!connected) return <AdminAuth api={WEAKEST_API} setConnected={setConnected}/>;
@@ -183,11 +188,11 @@ const WeakestAdmin = () => {
             <Button onClick={onLogout}>Logout</Button>
         </Header>
         <Content rightPanel={[<Players key={1} game={game}/>, <ScoreList key={2} game={game}/>]}>
-            {useStateContent(game)}
+            {stateContent(game)}
         </Content>
         <Footer>
             <FooterItem className={styles.gameScore}>{game.score} ; {game.bank}</FooterItem>
-            <FooterItem>{useControl(game)}</FooterItem>
+            <FooterItem>{control(game)}</FooterItem>
         </Footer>
     </GameAdmin>
 }

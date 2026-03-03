@@ -1,6 +1,6 @@
 import React, {useEffect, useRef} from "react";
 import Konva from "konva";
-import styles from "whirligig/Whirligig.scss";
+import styles from "whirligig/Whirligig.module.scss";
 
 const Whirligig = ({game, callback}) => {
     const container = useRef(null);
@@ -170,7 +170,7 @@ const Whirligig = ({game, callback}) => {
         return () => {
             anim.stop();
         }
-    }, [])
+    }, [callback, game.cur_random_item_idx, game.items])
 
     return <div className={styles.whirligig} ref={container}/>
 };

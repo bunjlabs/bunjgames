@@ -1,5 +1,6 @@
 import React from "react";
 import styles from "weakest/FinalQuestions.scss";
+import classNames from "classnames";
 
 
 const FinalQuestions = ({game}) => {
@@ -25,7 +26,7 @@ const FinalQuestions = ({game}) => {
             {[first_questions, second_questions].map((questions, index) =>
                 <div key={index} className={styles.questions}>
                     {questions.map((item, index) =>
-                        <div key={index} className={css(
+                        <div key={index} className={classNames(
                             item.is_correct && styles.correctQuestion,
                             (!item.is_correct && item.is_processed) && styles.incorrectQuestion,
                             styles.question

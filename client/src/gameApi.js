@@ -1,5 +1,5 @@
 import axios from 'axios';
-import Subscriber from "./Subscriber";
+import Subscriber from "subscriber";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 

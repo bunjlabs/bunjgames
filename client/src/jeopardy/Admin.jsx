@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from "react";
-import {useHistory} from "react-router-dom";
+import {useNavigate} from "react-router-dom";
 
 import {AdminAuth} from "common/Auth";
 import {
@@ -17,7 +17,10 @@ import {BlockContent, Content, Footer, FooterItem, GameAdmin, Header, TextConten
 import {ThemesList, ThemesGrid, QuestionsGrid} from "jeopardy/Themes";
 import {getStatusName, EventType, getRoundName} from "jeopardy/Common";
 import styles from "jeopardy/Admin.scss";
-import {FaVolumeMute, MdReplayCircleFilled} from "react-icons/all";
+import {FaVolumeMute} from "react-icons/fa";
+import {MdReplayCircleFilled} from "react-icons/md"
+import classNames from "classnames";
+import {JEOPARDY_API} from "../index";
 
 
 const QuestionEvent = ({question}) => {
@@ -72,7 +75,7 @@ const FinalBets = ({players, answerer}) => {
         JEOPARDY_API.intercom("do_bet:" + playerId)
     }
 
-    return <div className={css(styles.padding, styles.players)}>
+    return <div className={classNames(styles.padding, styles.players)}>
         {players.map((player, index) =>
             <Player key={index} balance={player.final_bet} selected={answerer && player.id === answerer}
                     name={player.name} onClick={() => onClick(player.id)}/>
@@ -85,7 +88,7 @@ const FinalAnswers = ({players, answerer}) => {
         JEOPARDY_API.intercom("do_answer:" + playerId)
     }
 
-    return <div className={css(styles.padding, styles.players)}>
+    return <div className={classNames(styles.padding, styles.players)}>
         {players.map((player, index) =>
             <Player key={index} balance={player.final_answer || "⸻"} selected={answerer && player.id === answerer}
                     name={player.name} onClick={() => onClick(player.id)}/>
@@ -120,13 +123,13 @@ const BalanceControl = ({game}) => {
 };
 
 const Player = ({balance, name, onClick, selected}) => {
-    return <div className={css(styles.button, selected && styles.selected, styles.player)} onClick={onClick}>
+    return <div className={classNames(styles.button, selected && styles.selected, styles.player)} onClick={onClick}>
         <div>{balance}</div>
         <div>{name}</div>
     </div>
 }
 
-const useStateContent = (game) => {
+const stateContent = (game) => {
     const onSelectQuestion = (questionId) => {
         JEOPARDY_API.chooseQuestion(questionId);
     };
@@ -158,7 +161,7 @@ const useStateContent = (game) => {
     }
 };
 
-const useControl = (game, answerer, bet) => {
+const control = (game, answerer, bet) => {
     const onNextClick = () => JEOPARDY_API.nextState(game.state);
     const onSkipClick = () => JEOPARDY_API.skip_question();
     const onAnswererClick = () => JEOPARDY_API.set_answerer_and_bet(answerer, bet);
@@ -191,7 +194,7 @@ const useControl = (game, answerer, bet) => {
 const JeopardyAdmin = () => {
     const game = useGame(JEOPARDY_API);
     const [connected, setConnected] = useAuth(JEOPARDY_API);
-    const history = useHistory();
+    const navigate = useNavigate();
 
     const [answerer, setAnswerer] = useState();
     const [bet, setBet] = useState();
@@ -210,7 +213,7 @@ const JeopardyAdmin = () => {
     }
     const onLogout = () => {
         JEOPARDY_API.logout();
-        history.push("/admin");
+        navigate("/admin");
     };
     const onPlayerSelect = (id) => {
         if (game.state === "question_event") setAnswerer(id);
@@ -228,14 +231,14 @@ const JeopardyAdmin = () => {
             <Button onClick={onLogout}>Logout</Button>
         </Header>
         <Content rightPanel={<BalanceControl game={game}/>}>
-            {useStateContent(game)}
+            {stateContent(game)}
         </Content>
         <Footer>
             <FooterItem>
                 <HorizontalList>
                     {game.players.map((player, index) => (
                         <TwoLineListItem
-                            key={index} className={css(
+                            key={index} className={classNames(
                                 game.state === "question_event" && styles.active,
                                 styles.player, player.id === answerer && styles.selected)}
                             onClick={() => onPlayerSelect(player.id)}
@@ -246,12 +249,12 @@ const JeopardyAdmin = () => {
                     ))}
                 </HorizontalList>
                 {game.state === "question_event" && <Input
-                    className={css(styles.bet)} type={"number"}
+                    className={classNames(styles.bet)} type={"number"}
                     onChange={e => setBet(parseInt(e.target.value))} value={bet}/>
                 }
             </FooterItem>
             <FooterItem>
-                {useControl(game, answerer, bet)}
+                {control(game, answerer, bet)}
             </FooterItem>
         </Footer>
     </GameAdmin>

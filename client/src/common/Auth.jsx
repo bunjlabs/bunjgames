@@ -1,5 +1,5 @@
 import React, {useState, useEffect, useRef} from "react";
-import styles from "./Auth.scss";
+import styles from "./Auth.module.scss";
 import {Loading, Toast} from "./Essentials.jsx";
 import {toast} from "react-toastify";
 import {useLocation} from "react-router-dom";
@@ -133,7 +133,7 @@ const AdminAuth = ({api, setConnected}) => {
         } else {
             setLoading(false);
         }
-    }, []);
+    }, [api, setConnected]);
 
     if(loading) return <Loading/>
 
@@ -147,11 +147,10 @@ const PlayerAuth = ({api, setConnected}) => {
     const [loading, setLoading] = useState(true);
     const query = useQuery();
 
-    const checkGame = (game) => {
-        return !game.players || !api.playerId || game.players.find(p => p.id === api.playerId)
-    }
-
     useEffect(() => {
+        const checkGame = (game) => {
+            return !game.players || !api.playerId || game.players.find(p => p.id === api.playerId)
+        }
         if(api.hasToken() && api.hasPlayerId() && !query.get('token')) {
             api.connect(api.token, checkGame).then(() => {
                 setConnected(true);
@@ -161,7 +160,7 @@ const PlayerAuth = ({api, setConnected}) => {
         } else {
             setLoading(false);
         }
-    }, []);
+    }, [api, query, setConnected]);
 
     if(loading) return <Loading/>
 

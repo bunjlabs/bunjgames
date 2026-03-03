@@ -1,33 +1,34 @@
 import React from "react";
-import QRCode from "qrcode.react";
-import styles from "common/View.scss";
+import {QRCodeSVG} from "qrcode.react";
+import styles from "common/View.module.scss";
 import {Toast} from "common/Essentials";
-import {FaTimesCircle} from "react-icons/all";
+import {FaTimesCircle} from "react-icons/fa";
+import classNames from "classnames";
 
 const ExitButton = ({onClick}) => (
-    <a className={styles.exit} onClick={() => {
-        if(confirm("Are you sure want to exit?")){
+    <button className={styles.exit} onClick={e => {
+        if(window.confirm("Are you sure want to exit?")){
             onClick();
         } else {
             e.preventDefault();
         }
-    }}><FaTimesCircle /></a>
+    }}><FaTimesCircle /></button>
 )
 
 const TextContent = ({className, children}) => (
-    <div className={css(styles.text, className)}>
+    <div className={classNames(styles.text, className)}>
         <p>{children}</p>
     </div>
 );
 
 const generateClientUrl = (path) => {
-    return location.protocol + '//' + location.host + path;
+    return window.location.protocol + '//' + window.location.host + path;
 }
 
 const QRCodeContent = ({className, children, value}) => (
-    <div className={css(styles.text, className)}>
+    <div className={classNames(styles.text, className)}>
         <p>{children}</p>
-        <QRCode className={styles.qr} size={2000} includeMargin={true} bgColor={'#fff'} value={value} />
+        <QRCodeSVG className={styles.qr} size={2000} marginSize={4} bgColor={'#fff'} value={value} />
     </div>
 );
 

@@ -1,4 +1,5 @@
-import {FaCat, RiAuctionFill} from "react-icons/all";
+import {FaCat} from "react-icons/fa";
+import {RiAuctionFill} from "react-icons/ri";
 import React from "react";
 
 const getStatusName = (status) => {
@@ -37,6 +38,8 @@ const getStatusName = (status) => {
             return "Final player bet";
         case 'game_end':
             return "Game over";
+        default:
+            break;
     }
 }
 
@@ -48,8 +51,9 @@ const EventType = ({type}) => {
             return <div>Auction<br/><RiAuctionFill/></div>;
         case 'bagcat':
             return <div>Cat in the bag<br/><FaCat/></div>;
+        default:
+            return <div/>
     }
-    return <div/>
 }
 
 const getRoundName = (game) => {

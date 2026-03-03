@@ -7,9 +7,10 @@ import {ThemesList, ThemesGrid, QuestionsGrid} from "jeopardy/Themes";
 import {getRoundName, EventType} from "jeopardy/Common";
 import {Content, ExitButton, GameView, TextContent, QRCodeContent} from "common/View";
 import styles from "jeopardy/View.scss";
-import {useHistory} from "react-router-dom";
+import {useNavigate} from "react-router-dom";
 import {generateClientUrl} from "../common/View";
-import {GiMusicalNotes} from "react-icons/all";
+import {GiMusicalNotes} from "react-icons/gi";
+import {JEOPARDY_API} from "../index";
 
 
 const Music = {
@@ -46,7 +47,7 @@ const delocalise = (url) => {
 }
 
 const QuestionMessage = ({game, text, image, audio, video, isContentPlaying}) => {
-    
+
     return <div className={styles.media}>
         {text && !image && !video && <p>{text}</p>}
         {image && <ImagePlayer game={game} url={delocalise(image)}/>}
@@ -56,7 +57,7 @@ const QuestionMessage = ({game, text, image, audio, video, isContentPlaying}) =>
     </div>
 }
 
-const useStateContent = (game, isContentPlaying) => {
+const stateContent = (game, isContentPlaying) => {
     const {question} = game;
     const answerer = game.answerer && game.players.find(p => p.id === game.answerer);
 
@@ -111,21 +112,23 @@ const JeopardyView = () => {
             case "intro": Music.intro.play(); break;
             case "round": Music.round.play(); break;
             case "round_themes": Music.themes.play(); break;
-            case "question_event": {
+            case "question_event":
                 if (game.question.type === "auction") {
                     Music.auction.play();
                 } else if (game.question.type === "bagcat") {
                     Music.bagcat.play();
                 }
-            } break;
+                break;
             case "final_answer": Music.minute.play(); break;
             case "game_end": Music.game_end.play(); break;
+            default: break;
         }
     }, (message) => {
         switch (message) {
             case "skip": Sounds.skip.play(); break;
             case "sound_stop": resetSounds(); setContentPlaying(false); break;
             case "replay": setContentPlaying(true); break;
+            default: break;
         }
     });
 
@@ -138,10 +141,10 @@ const JeopardyView = () => {
 
     const [connected, setConnected] = useAuth(JEOPARDY_API);
 
-    const history = useHistory();
+    const navigate = useNavigate();
     const onLogout = () => {
         JEOPARDY_API.logout();
-        history.push("/admin");
+        navigate("/admin");
     };
 
     if (!connected) return <AdminAuth api={JEOPARDY_API} setConnected={setConnected}/>;
@@ -149,7 +152,7 @@ const JeopardyView = () => {
 
     return <GameView>
         <ExitButton onClick={onLogout}/>
-        <Content>{useStateContent(game, isContentPlaying)}</Content>
+        <Content>{stateContent(game, isContentPlaying)}</Content>
     </GameView>
 }
 

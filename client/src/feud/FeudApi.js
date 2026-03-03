@@ -1,4 +1,4 @@
-import GameApi from "../GameApi.js";
+import GameApi from "gameApi.js";
 
 const FEUD_TOKEN = "FEUD_TOKEN";
 const FEUD_PLAYER_ID = "FEUD_PLAYER_ID";

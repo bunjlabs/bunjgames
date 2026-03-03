@@ -1,6 +1,7 @@
 import React from "react";
 import styles from "./Question.scss";
-import {FaTimes} from "react-icons/all";
+import {FaTimes} from "react-icons/fa";
+import classNames from "classnames";
 
 const Question = ({game, showHiddenAnswers, className, onSelect}) => {
     const answerer = game.answerer && game.players.find(t => t.id === game.answerer);
@@ -11,7 +12,7 @@ const Question = ({game, showHiddenAnswers, className, onSelect}) => {
         answers.push(
             <div key={'answer_' + index}
                  onClick={() => !isAnswerOpened && onSelect(answer.id)}
-                 className={css(
+                 className={classNames(
                     isAnswerOpened && styles.opened,
                     !isAnswerOpened && onSelect ? styles.active : null,
                     styles.cell, styles.answer
@@ -23,7 +24,7 @@ const Question = ({game, showHiddenAnswers, className, onSelect}) => {
         answers.push(
             <div
                 key={'value_' + index}
-                className={css(
+                className={classNames(
                     isAnswerOpened && styles.opened, styles.cell, styles.value
                 )}
             >
@@ -35,7 +36,7 @@ const Question = ({game, showHiddenAnswers, className, onSelect}) => {
             answers.push(
                 <div
                     key={'strike_' + index}
-                    className={css(
+                    className={classNames(
                         answerer && answerer.strikes >= strikesContainersCount && styles.active,
                         styles.cell, styles.strike
                     )}
@@ -50,8 +51,8 @@ const Question = ({game, showHiddenAnswers, className, onSelect}) => {
         }
     });
 
-    return <div className={css(className, styles.grid)}>
-        <div className={css(styles.cell, styles.question)}>{game.question.text}</div>
+    return <div className={classNames(className, styles.grid)}>
+        <div className={classNames(styles.cell, styles.question)}>{game.question.text}</div>
         {answers}
     </div>
 };
@@ -60,24 +61,24 @@ const FinalQuestions = ({game, className}) => {
     const answers = [];
     game.final_questions.forEach((question, index) => {
         answers.push(
-            <div key={'question_' + index} className={css(styles.cell, styles.answer, styles.opened)}>
+            <div key={'question_' + index} className={classNames(styles.cell, styles.answer, styles.opened)}>
                 {!question.is_processed && question.text}
             </div>
         );
         let answer = question.answers.length ? question.answers[0] : null;
         answers.push(
-            <div key={'answer_' + index} className={css(styles.cell, styles.answer, styles.opened)}>
+            <div key={'answer_' + index} className={classNames(styles.cell, styles.answer, styles.opened)}>
                 {!question.is_processed && (answer ? answer.text : "-")}
             </div>
         );
         answers.push(
-            <div key={'value_' + index} className={css(styles.cell, styles.value, styles.opened)}>
+            <div key={'value_' + index} className={classNames(styles.cell, styles.value, styles.opened)}>
                 {!question.is_processed && (answer ? answer.value : "0")}
             </div>
         );
     });
 
-    return <div className={css(className, styles.finalQuestionsGrid)}>
+    return <div className={classNames(className, styles.finalQuestionsGrid)}>
         {answers}
     </div>
 }

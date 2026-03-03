@@ -1,12 +1,13 @@
 import React from "react";
-import {useHistory} from "react-router-dom";
+import {useNavigate} from "react-router-dom";
 
 import {Loading, useAuth, useGame} from "common/Essentials";
 import {PlayerAuth} from "common/Auth";
 import {GameClient, Content, Header, ExitButton, TextContent, BigButtonContent} from "common/Client";
+import {FEUD_API} from "../index";
 
 
-const useStateContent = (game) => {
+const stateContent = (game) => {
     const buttonActive = !game.answerer;
 
     const onButton = () => buttonActive && FEUD_API.button_click(FEUD_API.playerId);
@@ -24,19 +25,19 @@ const useStateContent = (game) => {
 const FeudClient = () => {
     const game = useGame(FEUD_API);
     const [connected, setConnected] = useAuth(FEUD_API);
-    const history = useHistory();
+    const navigate = useNavigate();
 
     if (!connected) return <PlayerAuth api={FEUD_API} setConnected={setConnected}/>;
     if (!game) return <Loading/>;
 
     const onLogout = () => {
         FEUD_API.logout();
-        history.push("/");
+        navigate("/");
     };
 
     return <GameClient>
         <Header><ExitButton onClick={onLogout}/></Header>
-        <Content>{useStateContent(game)}</Content>
+        <Content>{stateContent(game)}</Content>
     </GameClient>
 }
 

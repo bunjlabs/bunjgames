@@ -1,5 +1,5 @@
 import React, {useState} from "react";
-import {useHistory} from "react-router-dom";
+import {useNavigate} from "react-router-dom";
 
 import {
     Loading,
@@ -14,8 +14,9 @@ import {
 import {AdminAuth} from "common/Auth";
 import {BlockContent, Content, Footer, FooterItem, GameAdmin, Header, TextContent} from "common/Admin";
 
-import styles from "whirligig/Admin.scss";
-import {FaCheckSquare, FaMinus, FaPlus, FaSquare, FaVolumeMute} from "react-icons/all";
+import styles from "whirligig/Admin.module.scss";
+import {FaCheckSquare, FaMinus, FaPlus, FaSquare, FaVolumeMute} from "react-icons/fa";
+import {WHIRLIGIG_API} from "../index";
 
 
 const getStatusName = (status) => {
@@ -40,6 +41,8 @@ const getStatusName = (status) => {
             return "Question end";
         case 'end':
             return "Game over";
+        default:
+            return "";
     }
 }
 
@@ -138,7 +141,7 @@ const ScoreControl = ({game}) => {
     </div>
 };
 
-const useStateContent = (game) => {
+const stateContent = (game) => {
     const QuestionInfo = ({game}) => {
         return [
             <div key={1}>{getStatusName(game.state)}</div>,
@@ -201,7 +204,7 @@ const useStateContent = (game) => {
     </BlockContent>
 };
 
-const useControl = (game) => {
+const control = (game) => {
     const onGongClick = () => WHIRLIGIG_API.intercom("gong");
     const onAnswerClick = (isCorrect) => WHIRLIGIG_API.answerCorrect(isCorrect);
     const onNextClick = () => WHIRLIGIG_API.nextState(game.state);
@@ -231,12 +234,12 @@ const useControl = (game) => {
 const WhirligigAdmin = () => {
     const game = useGame(WHIRLIGIG_API);
     const [connected, setConnected] = useAuth(WHIRLIGIG_API);
-    const history = useHistory();
+    const navigate = useNavigate();
 
     const onSoundStop = () => WHIRLIGIG_API.intercom("sound_stop");
     const onLogout = () => {
         WHIRLIGIG_API.logout();
-        history.push("/admin");
+        navigate("/admin");
     };
 
     if (!connected) return <AdminAuth api={WHIRLIGIG_API} setConnected={setConnected}/>;
@@ -250,11 +253,11 @@ const WhirligigAdmin = () => {
             <Button onClick={onLogout}>Logout</Button>
         </Header>
         <Content rightPanel={[<Items items={game.items || []}/>, <ScoreControl game={game}/>]}>
-            {useStateContent(game)}
+            {stateContent(game)}
         </Content>
         <Footer>
             <FooterItem className={styles.score}>{game.connoisseurs_score} : {game.viewers_score}</FooterItem>
-            <FooterItem>{useControl(game)}</FooterItem>
+            <FooterItem>{control(game)}</FooterItem>
         </Footer>
     </GameAdmin>
 }

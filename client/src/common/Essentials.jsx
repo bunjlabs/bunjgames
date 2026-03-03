@@ -1,10 +1,11 @@
 import React, {useEffect, useState} from "react";
 import ReactPlayer from "react-player";
-import styles from "./Essentials.scss";
+import styles from "./Essentials.module.scss";
 import {ToastContainer} from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
 import {Link} from "react-router-dom";
 import {Howl} from "howler";
+import classNames from "classnames";
 
 const HowlWrapper = (src, loop = false, volume = 1.0) => {
     return new Howl({
@@ -14,10 +15,10 @@ const HowlWrapper = (src, loop = false, volume = 1.0) => {
         preload: false
     });
 }
-const getMediaUrl = (game, url) => url.startsWith("/") ? `${BunjGamesConfig.MEDIA}${game.name}/${game.token}${url}` : url;
+const getMediaUrl = (game, url) => url.startsWith("/") ? `/media/${game.name}/${game.token}${url}` : url;
 
 const ImagePlayer = ({game, url}) => (
-    <img src={getMediaUrl(game, url)} alt="Image"/>
+    <img src={getMediaUrl(game, url)} alt="Missing"/>
 );
 
 const AudioPlayer = ({game, url, controls, playing}) => (
@@ -47,41 +48,41 @@ const Toast = () => (
 )
 
 const Button = ({onClick, className, children}) => (
-    <div className={css(styles.button, className)} onClick={onClick}>{children}</div>
+    <div className={classNames(styles.button, className)} onClick={onClick}>{children}</div>
 );
 
 const OvalButton = ({onClick, className, children}) => (
-    <div className={css(styles.oval, styles.button, className)} onClick={onClick}>{children}</div>
+    <div className={classNames(styles.oval, styles.button, className)} onClick={onClick}>{children}</div>
 );
 
 const ButtonLink = ({to, className, children}) => (
-    <Link className={css(styles.button, className)} to={to}>{children}</Link>
+    <Link className={classNames(styles.button, className)} to={to}>{children}</Link>
 );
 
 const Input = ({type, onChange, value, className}) => (
-    <input className={css(className, styles.input)} type={type} onChange={onChange} value={value}/>
+    <input className={classNames(className, styles.input)} type={type} onChange={onChange} value={value}/>
 )
 
 const VerticalList = ({className, children}) => (
-    <div className={css(styles.verticalList, styles.list, className)}>
+    <div className={classNames(styles.verticalList, styles.list, className)}>
         {children}
     </div>
 );
 
 const HorizontalList = ({className, children}) => (
-    <div className={css(styles.horizontalList, styles.list, className)}>
+    <div className={classNames(styles.horizontalList, styles.list, className)}>
         {children}
     </div>
 );
 
 const ListItem = ({className, children, ...props}) => (
-    <div className={css(styles.listItem, className)} {...props}>
+    <div className={classNames(styles.listItem, className)} {...props}>
         {children}
     </div>
 );
 
 const TwoLineListItem = ({className, children, ...props}) => (
-    <div className={css(styles.twoLineListItem, styles.listItem, className)} {...props}>
+    <div className={classNames(styles.twoLineListItem, styles.listItem, className)} {...props}>
         {children}
     </div>
 );
@@ -98,14 +99,14 @@ const useGame = (api, onState=() => {}, onIntercom=() => {}) => {
             api.getStateSubscriber().unsubscribe(stateId);
             api.getIntercomSubscriber().unsubscribe(intercomId);
         }
-    }, []);
+    }, [api, onIntercom, onState]);
 
     return game;
 }
 
 const useAuth = (api) => {
     const [connected, setConnected] = useState();
-    useEffect(() => setConnected(api.isConnected()), []);
+    useEffect(() => setConnected(api.isConnected()), [api]);
     return [connected, setConnected];
 }
 
