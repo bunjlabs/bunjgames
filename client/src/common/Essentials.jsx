@@ -1,5 +1,4 @@
-import React, {useEffect, useState} from "react";
-import ReactPlayer from "react-player";
+import React, {useEffect, useState, useRef} from "react";
 import styles from "./Essentials.module.scss";
 import {ToastContainer} from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
@@ -21,13 +20,99 @@ const ImagePlayer = ({game, url}) => (
     <img src={getMediaUrl(game, url)} alt="Missing"/>
 );
 
-const AudioPlayer = ({game, url, controls, playing}) => (
-    <ReactPlayer controls={controls} playing={playing} url={getMediaUrl(game, url)} width="100%" height="100%"/>
-);
+const AudioPlayer = ({game, url, controls, playing}) => {
+    const audioUrl = getMediaUrl(game, url);
+    const audioRef = useRef(null);
 
-const VideoPlayer = ({game, url, controls, playing}) => (
-    <ReactPlayer controls={controls} playing={playing} url={getMediaUrl(game, url)} width="100%" height="100%"/>
-);
+    useEffect(() => {
+        const audio = audioRef.current;
+        if (!audio) return;
+
+        const handleCanPlay = () => {
+            if (playing) {
+                audio.play().catch(err => {
+                    console.warn('Audio autoplay prevented:', err);
+                });
+            }
+        };
+
+        audio.addEventListener('canplay', handleCanPlay);
+
+        // Try to play immediately if already loaded
+        if (playing && audio.readyState >= 3) {
+            audio.play().catch(err => {
+                console.warn('Audio autoplay prevented:', err);
+            });
+        }
+
+        return () => {
+            audio.removeEventListener('canplay', handleCanPlay);
+        };
+    }, [playing, audioUrl]);
+
+    return (
+        <audio
+            ref={audioRef}
+            src={audioUrl}
+            controls={controls}
+            style={{width: '100%'}}
+            preload="metadata"
+            onError={(e) => {
+                console.error('Audio error:', e.target.error);
+            }}
+        />
+    );
+};
+
+const VideoPlayer = ({game, url, controls, playing}) => {
+    const videoUrl = getMediaUrl(game, url);
+    const videoRef = useRef(null);
+
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video) return;
+
+        const handleCanPlay = () => {
+            if (playing) {
+                video.play().catch(err => {
+                    console.warn('Autoplay prevented:', err);
+                });
+            }
+        };
+
+        video.addEventListener('canplay', handleCanPlay);
+
+        // Try to play immediately if already loaded
+        if (playing && video.readyState >= 3) {
+            video.play().catch(err => {
+                console.warn('Autoplay prevented:', err);
+            });
+        }
+
+        return () => {
+            video.removeEventListener('canplay', handleCanPlay);
+        };
+    }, [playing, videoUrl]);
+
+    return (
+        <video
+            ref={videoRef}
+            src={videoUrl}
+            controls={controls}
+            width="100%"
+            height="100%"
+            style={{maxWidth: '100%', maxHeight: '100%'}}
+            preload="metadata"
+            playsInline
+            onError={(e) => {
+                console.error('Video error:', e.target.error);
+            }}
+            onLoadedMetadata={() => {
+                console.log('Video metadata loaded:', videoUrl);
+            }}
+        />
+    );
+};
 
 const Loading = () => (
     <div className={styles.loading}>Loading...</div>

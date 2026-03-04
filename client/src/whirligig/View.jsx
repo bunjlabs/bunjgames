@@ -1,4 +1,4 @@
-import React, {useEffect} from "react";
+import React, {useEffect, useCallback, useMemo} from "react";
 import {AudioPlayer, HowlWrapper, ImagePlayer, VideoPlayer, Loading, useGame, useAuth} from "common/Essentials";
 import {AdminAuth} from "common/Auth";
 import Whirligig from "whirligig/Whirligig";
@@ -64,17 +64,20 @@ const isWhirligigAvailable = (game) => {
     return ["question_whirligig"].includes(game.state);
 }
 
-const QuestionMessage = ({game, text, image, audio, video}) => {
+const QuestionMessage = React.memo(({game, text, image, audio, video}) => {
+    const videoKey = useMemo(() => video ? `${game.state}-${video}` : null, [game.state, video]);
+    const audioKey = useMemo(() => audio ? `${game.state}-${audio}` : null, [game.state, audio]);
+    
     return <div className={styles.media}>
         {text && !image && !video && <div><p>{text}</p></div>}
-        {image && <div><ImagePlayer game={game} url={image}/></div>}
+        {image && <ImagePlayer game={game} url={image}/>}
         {["question_start", "right_answer"].includes(game.state) && audio &&
-        <div><AudioPlayer controls playing={true} game={game} url={audio}/></div>}
+        <div key={audioKey}><AudioPlayer controls playing={true} game={game} url={audio}/></div>}
         {["question_start", "right_answer"].includes(game.state) && video &&
-        <div><VideoPlayer controls playing={true} game={game} url={video}/></div>}
-        {!text && !image && !video && audio && <p style={{fontSize: "150px"}}><GiMusicalNotes /></p>}
+        <VideoPlayer key={videoKey} controls playing={true} game={game} url={video}/>}
+        {!text && !image && !video && audio && <div><p style={{fontSize: "150px"}}><GiMusicalNotes /></p></div>}
     </div>
-}
+});
 
 const triggerTimerSound = (game, time) => {
     if (!game.cur_item) return;
@@ -128,7 +131,7 @@ const stateContent = (game) => {
 }
 
 const WhirligigView = () => {
-    const game = useGame(WHIRLIGIG_API, (game) => {
+    const onStateChange = useCallback((game) => {
         resetSounds();
         switch (game.state) {
             case "start": Music.start.play(); break;
@@ -145,7 +148,9 @@ const WhirligigView = () => {
             default:
                 break;
         }
-    }, (message) => {
+    }, []);
+
+    const onIntercom = useCallback((message) => {
         switch (message) {
             case "gong":
                 Sounds.gong.play();
@@ -156,7 +161,9 @@ const WhirligigView = () => {
             default:
                 break;
         }
-    });
+    }, []);
+
+    const game = useGame(WHIRLIGIG_API, onStateChange, onIntercom);
 
     useEffect(() => {
         loadSounds();

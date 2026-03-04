@@ -53,7 +53,7 @@ const ItemQuestion = ({question, single}) => {
         : <FaSquare />
 
     return <div className={styles.question}>
-        <div>{single || <div style={{float: "left", marginRight: 10}}>{checkbox}</div>} Question: {description}</div>
+        <div>{single || <div style={{float: "right", margin: 10}}>{checkbox}</div>} Question: {description}</div>
         <div>Answer: {answer_description}</div>
     </div>
 };
@@ -76,7 +76,7 @@ const Item = ({item}) => {
 
     return <div className={styles.item}>
         <div className={styles.short} onClick={() => select(!isSelected)}>
-            <div className={styles.desc}>{name}: {description}</div>
+            <div className={styles.desc}>{description || name}</div>
             <div className={styles.processed}>{checkbox}</div>
         </div>
         {isSelected && <ItemQuestions questions={item.questions}/>}
