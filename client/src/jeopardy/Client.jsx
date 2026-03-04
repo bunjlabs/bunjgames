@@ -5,7 +5,7 @@ import {HowlWrapper, Loading, Toast, useAuth, useGame} from "common/Essentials";
 import {PlayerAuth} from "common/Auth";
 import {ExitButton, Header} from "common/Client";
 
-import styles from "jeopardy/Client.scss";
+import styles from "jeopardy/Client.module.scss";
 import {JEOPARDY_API} from "../index";
 import classNames from "classnames";
 

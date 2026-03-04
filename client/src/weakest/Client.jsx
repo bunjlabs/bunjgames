@@ -5,7 +5,7 @@ import {VerticalList, ListItem, Loading, useAuth, useGame} from "common/Essentia
 import {PlayerAuth} from "common/Auth";
 import {GameClient, Content, Header, ExitButton, TextContent, BigButtonContent} from "common/Client";
 
-import styles from "weakest/Client.scss";
+import styles from "weakest/Client.module.scss";
 import classNames from "classnames";
 import {WEAKEST_API} from "../index";
 

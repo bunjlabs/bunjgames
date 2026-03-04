@@ -3,7 +3,7 @@ import {Loading, useGame, useAuth, HowlWrapper} from "common/Essentials";
 import {AdminAuth} from "common/Auth";
 import {Content, ExitButton, GameView, TextContent, QRCodeContent} from "common/View";
 import {FinalQuestions, Question} from "feud/Question";
-import styles from "feud/View.scss";
+import styles from "feud/View.module.scss";
 import {useNavigate} from "react-router-dom";
 import {generateClientUrl} from "../common/View";
 import {FEUD_API} from "../index";

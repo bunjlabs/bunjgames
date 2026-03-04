@@ -47,14 +47,14 @@ const Whirligig = ({game, callback}) => {
                 arrows.set(i, arrow);
                 layer.add(arrow);
             } else {
-                const has_city = item.questions.length === 1 && Boolean(item.questions[0].author_city)
+                const isLongName = item.name.length > 3;
                 const text = new Konva.Text({
                     align: "center",
                     verticalAlign: "middle",
                     fill: "white",
-                    fontSize: has_city ? 14: 20,
-                    fontStyle: has_city ? "normal" : "bold",
-                    text: has_city ? item.questions[0].author_city : item.name,
+                    fontSize: isLongName ? 14: 20,
+                    fontStyle: isLongName ? "normal" : "bold",
+                    text: item.name,
                     wrap: "word"
                 })
                 items.set(i, text);

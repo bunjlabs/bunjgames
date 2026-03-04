@@ -1,5 +1,5 @@
 import React from "react";
-import styles from "./Question.scss";
+import styles from "./Question.module.scss";
 import {FaTimes} from "react-icons/fa";
 import classNames from "classnames";
 

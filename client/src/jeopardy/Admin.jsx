@@ -16,7 +16,7 @@ import {BlockContent, Content, Footer, FooterItem, GameAdmin, Header, TextConten
 
 import {ThemesList, ThemesGrid, QuestionsGrid} from "jeopardy/Themes";
 import {getStatusName, EventType, getRoundName} from "jeopardy/Common";
-import styles from "jeopardy/Admin.scss";
+import styles from "jeopardy/Admin.module.scss";
 import {FaVolumeMute} from "react-icons/fa";
 import {MdReplayCircleFilled} from "react-icons/md"
 import classNames from "classnames";

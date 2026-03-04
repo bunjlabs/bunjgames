@@ -17,7 +17,7 @@ import {BlockContent, Content, Footer, FooterItem, GameAdmin, Header, TextConten
 import {AdminAuth} from "common/Auth";
 import FinalQuestions from "weakest/FinalQuestions";
 
-import styles from "weakest/Admin.scss";
+import styles from "weakest/Admin.module.scss";
 import {FaVolumeMute} from "react-icons/fa";
 import {WEAKEST_API} from "../index";
 import classNames from "classnames";

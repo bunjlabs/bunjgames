@@ -15,7 +15,7 @@ import {
 import {Content, Footer, FooterItem, GameAdmin, Header, TextContent} from "common/Admin";
 import {AdminAuth} from "common/Auth";
 
-import styles from "feud/Admin.scss";
+import styles from "feud/Admin.module.scss";
 import {FinalQuestions, Question} from "feud/Question";
 import {FaVolumeMute} from "react-icons/fa";
 import classNames from "classnames";

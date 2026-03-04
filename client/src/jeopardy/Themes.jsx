@@ -1,5 +1,5 @@
 import React from "react";
-import styles from "./Themes.scss";
+import styles from "./Themes.module.scss";
 import {FaCat} from "react-icons/fa";
 import {RiAuctionFill} from "react-icons/ri"
 import classNames from "classnames";

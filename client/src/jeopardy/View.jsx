@@ -6,7 +6,7 @@ import {AdminAuth} from "../common/Auth";
 import {ThemesList, ThemesGrid, QuestionsGrid} from "jeopardy/Themes";
 import {getRoundName, EventType} from "jeopardy/Common";
 import {Content, ExitButton, GameView, TextContent, QRCodeContent} from "common/View";
-import styles from "jeopardy/View.scss";
+import styles from "jeopardy/View.module.scss";
 import {useNavigate} from "react-router-dom";
 import {generateClientUrl} from "../common/View";
 import {GiMusicalNotes} from "react-icons/gi";

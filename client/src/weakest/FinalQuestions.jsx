@@ -1,5 +1,5 @@
 import React from "react";
-import styles from "weakest/FinalQuestions.scss";
+import styles from "weakest/FinalQuestions.module.scss";
 import classNames from "classnames";
 
 

@@ -1,0 +1,9 @@
+version: '3.8'
+services:
+  bunjgames-nginx:
+    image: nginx
+    container_name: bunjgames-nginx
+    network_mode: host
+    volumes:
+      - ./server/media:/app/media:ro
+      - ./nginx.dev.conf:/etc/nginx/nginx.conf:ro

@@ -1,62 +1,63 @@
 package whirligig
 
 import (
+	"log"
 	"math/rand"
+	"os"
+	"slices"
 	"sync"
 	"time"
 
 	"bunjgames-server/common"
+
+	"gopkg.in/yaml.v3"
 )
 
+type State string
+
 const (
-	StateStart              = "start"
-	StateIntro              = "intro"
-	StateQuestions          = "questions"
-	StateQuestionWhirligig  = "question_whirligig"
-	StateQuestionStart      = "question_start"
-	StateQuestionDiscussion = "question_discussion"
-	StateAnswer             = "answer"
-	StateRightAnswer        = "right_answer"
-	StateQuestionEnd        = "question_end"
-	StateEnd                = "end"
+	StateStart              State = "start"
+	StateIntro              State = "intro"
+	StateQuestions          State = "questions"
+	StateQuestionWhirligig  State = "question_whirligig"
+	StateQuestionStart      State = "question_start"
+	StateQuestionDiscussion State = "question_discussion"
+	StateAnswer             State = "answer"
+	StateRightAnswer        State = "right_answer"
+	StateQuestionEnd        State = "question_end"
+	StateEnd                State = "end"
 
 	MaxScore = 6
-
-	TypeStandard   = "standard"
-	TypeBlitz      = "blitz"
-	TypeSuperblitz = "superblitz"
 )
 
 type Question struct {
-	Number      int     `json:"number"`
-	IsProcessed bool    `json:"is_processed"`
-	Description string  `json:"description"`
-	Text        *string `json:"text"`
-	Image       *string `json:"image"`
-	Audio       *string `json:"audio"`
-	Video       *string `json:"video"`
+	IsProcessed bool `json:"is_processed"`
 
-	AnswerDescription string  `json:"answer_description"`
-	AnswerText        *string `json:"answer_text"`
-	AnswerImage       *string `json:"answer_image"`
-	AnswerAudio       *string `json:"answer_audio"`
-	AnswerVideo       *string `json:"answer_video"`
+	Description string `json:"description" yaml:"description"`
+	Text        string `json:"text" yaml:"text"`
+	Image       string `json:"image" yaml:"image"`
+	Audio       string `json:"audio" yaml:"audio"`
+	Video       string `json:"video" yaml:"video"`
 
-	AuthorName string `json:"author_name"`
-	AuthorCity string `json:"author_city"`
+	AnswerDescription string `json:"answer_description" yaml:"answer_description"`
+	AnswerText        string `json:"answer_text" yaml:"answer_text"`
+	AnswerImage       string `json:"answer_image" yaml:"answer_image"`
+	AnswerAudio       string `json:"answer_audio" yaml:"answer_audio"`
+	AnswerVideo       string `json:"answer_video" yaml:"answer_video"`
+
+	Author string `json:"author" yaml:"author"`
 }
 
 type GameItem struct {
-	Number      int        `json:"number"`
-	Name        string     `json:"name"`
-	Description string     `json:"description"`
-	Type        string     `json:"type"`
+	Name        string     `json:"name" yaml:"name"`
+	Description string     `json:"description" yaml:"description"`
+	Type        string     `json:"type" yaml:"type"`
 	IsProcessed bool       `json:"is_processed"`
-	Questions   []Question `json:"questions"`
+	Questions   []Question `json:"questions" yaml:"questions"`
 }
 
 func (item *GameItem) GetTime() int {
-	if item.Type == TypeStandard {
+	if item.Type == "standard" {
 		return 60
 	}
 	return 20
@@ -66,13 +67,12 @@ type Game struct {
 	Mu sync.Mutex
 
 	Token           string     `json:"-"`
-	Expired         time.Time  `json:"-"`
 	ConnoissScore   int        `json:"-"`
 	ViewersScore    int        `json:"-"`
 	CurRandomItem   *int       `json:"-"`
 	CurItem         *int       `json:"-"`
 	CurQuestion     *int       `json:"-"`
-	State           string     `json:"-"`
+	State           State      `json:"-"`
 	TimerPaused     bool       `json:"-"`
 	TimerPausedTime int64      `json:"-"`
 	TimerTime       int64      `json:"-"`
@@ -82,7 +82,6 @@ type Game struct {
 func NewGame() *Game {
 	return &Game{
 		State:       StateStart,
-		Expired:     time.Now().Add(12 * time.Hour),
 		TimerPaused: true,
 	}
 }
@@ -156,7 +155,6 @@ func (g *Game) AnswerCorrect(isCorrect bool) error {
 		g.CurItem = nil
 		g.CurQuestion = nil
 		if g.ConnoissScore == MaxScore || g.ViewersScore == MaxScore || !g.hasUnprocessedItems() {
-			g.Expired = time.Now().Add(10 * time.Minute)
 			g.State = StateEnd
 		} else {
 			g.State = StateQuestionEnd
@@ -206,7 +204,7 @@ func (g *Game) randomiseNextItem() (randomIdx, actualIdx int, err error) {
 	return randomIdx, actualIdx, nil
 }
 
-func (g *Game) NextState(fromState *string) error {
+func (g *Game) NextState(fromState *State) error {
 	if fromState != nil && g.State != *fromState {
 		return common.ErrNothingToDo
 	}
@@ -257,195 +255,74 @@ func (g *Game) NextState(fromState *string) error {
 }
 
 func (g *Game) Parse(filename string) error {
-	root, err := common.ParseXMLFile(filename)
+	data, err := os.ReadFile(filename)
 	if err != nil {
-		return &common.BadFormatError{Msg: "Cannot parse XML"}
+		return &common.BadFormatError{Msg: "Cannot read file"}
 	}
+	log.Printf("Parsing game file %s", filename)
 
-	itemsXML := root.Find("items")
-	if itemsXML == nil {
+	var items []GameItem
+	if err := yaml.Unmarshal(data, &items); err != nil {
+		return &common.BadFormatError{Msg: "Cannot parse YAML"}
+	}
+	log.Printf("Parsed items: %+v", items)
+
+	if len(items) == 0 {
 		return &common.BadFormatError{Msg: "No items found"}
 	}
 
-	for itemNum, itemXML := range itemsXML.FindAll("item") {
-		if itemNum >= 13 {
-			return &common.BadFormatError{Msg: "Too many items"}
-		}
-		item := GameItem{
-			Number:      itemNum,
-			Name:        itemXML.FindText("name"),
-			Description: itemXML.FindText("description"),
-			Type:        itemXML.FindText("type"),
-		}
-
-		questionsXML := itemXML.Find("questions")
-		if questionsXML == nil {
-			continue
-		}
-		for qNum, qXML := range questionsXML.FindAll("question") {
-			if qNum >= 3 {
-				return &common.BadFormatError{Msg: "Too many questions"}
-			}
-			answerXML := qXML.Find("answer")
-			authorXML := qXML.Find("author")
-
-			q := Question{
-				Number:      qNum,
-				Description: qXML.FindText("description"),
-				Text:        strPtr(qXML.FindText("text")),
-				Image:       strPtr(qXML.FindText("image")),
-				Audio:       strPtr(qXML.FindText("audio")),
-				Video:       strPtr(qXML.FindText("video")),
-			}
-			if answerXML != nil {
-				q.AnswerDescription = answerXML.FindText("description")
-				q.AnswerText = strPtr(answerXML.FindText("text"))
-				q.AnswerImage = strPtr(answerXML.FindText("image"))
-				q.AnswerAudio = strPtr(answerXML.FindText("audio"))
-				q.AnswerVideo = strPtr(answerXML.FindText("video"))
-			}
-			if authorXML != nil {
-				q.AuthorName = authorXML.FindText("name")
-				q.AuthorCity = authorXML.FindText("city")
-			}
-
-			item.Questions = append(item.Questions, q)
-		}
-		g.Items = append(g.Items, item)
+	if len(items) > 13 {
+		return &common.BadFormatError{Msg: "Too many items"}
 	}
+	g.Items = items
 	return nil
 }
 
-func strPtr(s string) *string {
-	if s == "" {
-		return nil
-	}
-	return &s
-}
-
-// --- Serialization ---
-
-type QuestionState struct {
-	Number      int     `json:"number"`
-	IsProcessed bool    `json:"is_processed"`
-	Description string  `json:"description"`
-	Text        *string `json:"text"`
-	Image       *string `json:"image"`
-	Audio       *string `json:"audio"`
-	Video       *string `json:"video"`
-
-	AnswerDescription string  `json:"answer_description"`
-	AnswerText        *string `json:"answer_text"`
-	AnswerImage       *string `json:"answer_image"`
-	AnswerAudio       *string `json:"answer_audio"`
-	AnswerVideo       *string `json:"answer_video"`
-
-	AuthorName string `json:"author_name"`
-	AuthorCity string `json:"author_city"`
-}
-
-type ItemState struct {
-	Number      int             `json:"number"`
-	Name        string          `json:"name"`
-	Description string          `json:"description"`
-	Type        string          `json:"type"`
-	IsProcessed bool            `json:"is_processed"`
-	Questions   []QuestionState `json:"questions"`
-}
-
 type GameState struct {
-	Token            string         `json:"token"`
-	Expired          time.Time      `json:"expired"`
-	ConnoissScore    int            `json:"connoisseurs_score"`
-	ViewersScore     int            `json:"viewers_score"`
-	CurItem          *ItemState     `json:"cur_item"`
-	CurQuestion      *QuestionState `json:"cur_question"`
-	CurRandomItemIdx *int           `json:"cur_random_item_idx"`
-	CurItemIdx       *int           `json:"cur_item_idx"`
-	CurQuestionIdx   *int           `json:"cur_question_idx"`
-	State            string         `json:"state"`
-	Items            []ItemState    `json:"items"`
-	TimerPaused      bool           `json:"timer_paused"`
-	TimerPausedTime  int64          `json:"timer_paused_time"`
-	TimerTime        int64          `json:"timer_time"`
-	Name             string         `json:"name"`
-}
-
-func serializeQuestion(q *Question) QuestionState {
-	return QuestionState{
-		Number:            q.Number,
-		IsProcessed:       q.IsProcessed,
-		Description:       q.Description,
-		Text:              q.Text,
-		Image:             q.Image,
-		Audio:             q.Audio,
-		Video:             q.Video,
-		AnswerDescription: q.AnswerDescription,
-		AnswerText:        q.AnswerText,
-		AnswerImage:       q.AnswerImage,
-		AnswerAudio:       q.AnswerAudio,
-		AnswerVideo:       q.AnswerVideo,
-		AuthorName:        q.AuthorName,
-		AuthorCity:        q.AuthorCity,
-	}
-}
-
-func serializeItem(item *GameItem) ItemState {
-	qs := make([]QuestionState, len(item.Questions))
-	for i := range item.Questions {
-		qs[i] = serializeQuestion(&item.Questions[i])
-	}
-	return ItemState{
-		Number:      item.Number,
-		Name:        item.Name,
-		Description: item.Description,
-		Type:        item.Type,
-		IsProcessed: item.IsProcessed,
-		Questions:   qs,
-	}
+	Token            string     `json:"token"`
+	ConnoissScore    int        `json:"connoisseurs_score"`
+	ViewersScore     int        `json:"viewers_score"`
+	CurItem          *GameItem  `json:"cur_item"`
+	CurQuestion      *Question  `json:"cur_question"`
+	CurRandomItemIdx *int       `json:"cur_random_item_idx"`
+	CurItemIdx       *int       `json:"cur_item_idx"`
+	CurQuestionIdx   *int       `json:"cur_question_idx"`
+	State            State      `json:"state"`
+	Items            []GameItem `json:"items"`
+	TimerPaused      bool       `json:"timer_paused"`
+	TimerPausedTime  int64      `json:"timer_paused_time"`
+	TimerTime        int64      `json:"timer_time"`
+	Name             string     `json:"name"`
 }
 
 func (g *Game) Serialize() GameState {
-	questionStates := []string{
+	questionStates := []State{
 		StateQuestionWhirligig, StateQuestionStart, StateQuestionDiscussion,
 		StateAnswer, StateRightAnswer,
 	}
-	inQuestionState := false
-	for _, s := range questionStates {
-		if g.State == s {
-			inQuestionState = true
-			break
-		}
-	}
+	inQuestionState := slices.Contains(questionStates, g.State)
 
-	var curItemState *ItemState
-	var curQuestionState *QuestionState
+	var curItem *GameItem
 	if inQuestionState && g.CurItem != nil {
-		is := serializeItem(&g.Items[*g.CurItem])
-		curItemState = &is
-		if g.CurQuestion != nil {
-			qs := serializeQuestion(&g.Items[*g.CurItem].Questions[*g.CurQuestion])
-			curQuestionState = &qs
-		}
+		curItem = &g.Items[*g.CurItem]
 	}
 
-	items := make([]ItemState, len(g.Items))
-	for i := range g.Items {
-		items[i] = serializeItem(&g.Items[i])
+	var curQuestion *Question
+	if inQuestionState && curItem != nil && g.CurQuestion != nil {
+		curQuestion = &curItem.Questions[*g.CurQuestion]
 	}
 
 	return GameState{
 		Token:            g.Token,
-		Expired:          g.Expired,
 		ConnoissScore:    g.ConnoissScore,
 		ViewersScore:     g.ViewersScore,
-		CurItem:          curItemState,
-		CurQuestion:      curQuestionState,
+		CurItem:          curItem,
+		CurQuestion:      curQuestion,
 		CurRandomItemIdx: g.CurRandomItem,
 		CurItemIdx:       g.CurItem,
 		CurQuestionIdx:   g.CurQuestion,
 		State:            g.State,
-		Items:            items,
+		Items:            g.Items,
 		TimerPaused:      g.TimerPaused,
 		TimerPausedTime:  g.TimerPausedTime,
 		TimerTime:        g.TimerTime,

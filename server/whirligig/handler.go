@@ -49,8 +49,8 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	contentXML := filepath.Join(gamePath, "content.xml")
-	if err := game.Parse(contentXML); err != nil {
+	contentYAML := filepath.Join(gamePath, "content.yaml")
+	if err := game.Parse(contentYAML); err != nil {
 		os.RemoveAll(gamePath)
 		if bfe, ok := err.(*common.BadFormatError); ok {
 			common.ErrorResponse(w, http.StatusBadRequest, bfe.Msg)
@@ -60,7 +60,7 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	os.Remove(contentXML)
+	os.Remove(contentYAML)
 
 	entries, _ := os.ReadDir(gamePath)
 	if len(entries) == 0 {
@@ -96,7 +96,7 @@ func NewConsumer(hub *common.Hub) *common.ConsumerHandler {
 			switch method {
 			case "next_state":
 				fromState := common.OptStringParam(params, "from_state")
-				err = game.NextState(fromState)
+				err = game.NextState((*State)(fromState))
 			case "change_score":
 				cs, e1 := common.IntParam(params, "connoisseurs_score")
 				vs, e2 := common.IntParam(params, "viewers_score")

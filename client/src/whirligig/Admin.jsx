@@ -47,14 +47,13 @@ const getStatusName = (status) => {
 }
 
 const ItemQuestion = ({question, single}) => {
-    const {number, is_processed, description, answer_description} = question;
+    const {is_processed, description, answer_description} = question;
     const checkbox = (is_processed)
         ? <FaCheckSquare />
         : <FaSquare />
 
     return <div className={styles.question}>
-        {single || <div>{number}: {checkbox}</div>}
-        <div>Question: {description}</div>
+        <div>{single || <div style={{float: "left", marginRight: 10}}>{checkbox}</div>} Question: {description}</div>
         <div>Answer: {answer_description}</div>
     </div>
 };
@@ -150,8 +149,8 @@ const stateContent = (game) => {
                 {game.cur_item.description && <div>Description: {game.cur_item.description}</div>}
                 <div>Type: {game.cur_item.type}</div>
             </div>,
-            game.cur_question.author_name && <div key={3}>
-                <div>Author: {game.cur_question.author_name}, {game.cur_question.author_city}</div>
+            game.cur_question.author && <div key={3}>
+                <div>Author: {game.cur_question.author}</div>
             </div>
         ]
     }
@@ -161,8 +160,8 @@ const stateContent = (game) => {
         return <BlockContent>
             {game.items.map((item, index) => (
                 <div key={index}>
-                    {item.questions.length === 1 && Boolean(item.questions[0].author_city)
-                        ? (index === 12 ? "13 - " : "") + item.questions[0].author_name + ', ' + item.questions[0].author_city
+                    {item.questions.length === 1 && Boolean(item.questions[0].author)
+                        ? (index === 12 ? "13 - " : "") + item.questions[0].author
                         : item.name}
                 </div>
             ))}
