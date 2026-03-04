@@ -49,8 +49,13 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	contentYAML := filepath.Join(gamePath, "content.yaml")
-	if err := game.Parse(contentYAML); err != nil {
+	contentFilePath := filepath.Join(gamePath, "content.yaml")
+	contentData, err := os.ReadFile(contentFilePath)
+	if err != nil {
+		common.ErrorResponse(w, http.StatusBadRequest, "Cannot read file")
+	}
+	log.Printf("Parsing game file %s", contentFilePath)
+	if err := game.Parse(contentData); err != nil {
 		os.RemoveAll(gamePath)
 		if bfe, ok := err.(*common.BadFormatError); ok {
 			common.ErrorResponse(w, http.StatusBadRequest, bfe.Msg)
@@ -60,7 +65,7 @@ func CreateHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	os.Remove(contentYAML)
+	os.Remove(contentFilePath)
 
 	entries, _ := os.ReadDir(gamePath)
 	if len(entries) == 0 {
@@ -92,35 +97,7 @@ func NewConsumer(hub *common.Hub) *common.ConsumerHandler {
 			game.Mu.Lock()
 			defer game.Mu.Unlock()
 
-			var err error
-			switch method {
-			case "next_state":
-				fromState := common.OptStringParam(params, "from_state")
-				err = game.NextState((*State)(fromState))
-			case "change_score":
-				cs, e1 := common.IntParam(params, "connoisseurs_score")
-				vs, e2 := common.IntParam(params, "viewers_score")
-				if e1 != nil || e2 != nil {
-					return nil, nil, &common.BadFormatError{Msg: "Invalid params"}
-				}
-				game.ChangeScore(cs, vs)
-			case "change_timer":
-				paused, e := common.BoolParam(params, "paused")
-				if e != nil {
-					return nil, nil, &common.BadFormatError{Msg: "Invalid params"}
-				}
-				err = game.ChangeTimer(paused)
-			case "answer_correct":
-				isCorrect, e := common.BoolParam(params, "is_correct")
-				if e != nil {
-					return nil, nil, &common.BadFormatError{Msg: "Invalid params"}
-				}
-				err = game.AnswerCorrect(isCorrect)
-			case "extra_time":
-				err = game.ExtraTime()
-			default:
-				return nil, nil, &common.BadFormatError{Msg: "Unknown method"}
-			}
+			var err = game.ProcessCommand(method, params)
 
 			if err != nil {
 				return nil, nil, err
