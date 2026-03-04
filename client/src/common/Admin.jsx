@@ -1,6 +1,7 @@
 import React from "react";
-import styles from "common/Admin.scss";
+import styles from "common/Admin.module.scss";
 import {Toast} from "common/Essentials";
+import classNames from "classnames";
 
 const Header = ({gameName, token, stateName, children}) => {
     return <div className={styles.header}>
@@ -39,7 +40,7 @@ const Content = ({rightPanel, children}) => {
 }
 
 const FooterItem = ({className, children}) => (
-    <div className={css(styles.footerItem, className)}>
+    <div className={classNames(styles.footerItem, className)}>
         {children}
     </div>
 );

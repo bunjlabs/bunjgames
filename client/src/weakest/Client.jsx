@@ -1,11 +1,13 @@
 import React from "react";
-import {useHistory} from "react-router-dom";
+import {useNavigate} from "react-router-dom";
 
 import {VerticalList, ListItem, Loading, useAuth, useGame} from "common/Essentials";
 import {PlayerAuth} from "common/Auth";
 import {GameClient, Content, Header, ExitButton, TextContent, BigButtonContent} from "common/Client";
 
-import styles from "weakest/Client.scss";
+import styles from "weakest/Client.module.scss";
+import classNames from "classnames";
+import {WEAKEST_API} from "../index";
 
 
 const Players = ({game, player, onClick}) => {
@@ -13,7 +15,7 @@ const Players = ({game, player, onClick}) => {
         {game.players.filter(p => !p.is_weak).map(p =>
             <ListItem
                 key={p.id}
-                className={css(
+                className={classNames(
                     styles.player,
                     p.id === player.id && styles.self,
                     p.id === player.weak && styles.selected,
@@ -28,7 +30,7 @@ const Players = ({game, player, onClick}) => {
 }
 
 
-const useStateContent = (game) => {
+const stateContent = (game) => {
     const player = game.players.find(p => p.id === WEAKEST_API.playerId);
     const buttonActive = game.answerer && game.answerer === WEAKEST_API.playerId;
 
@@ -50,19 +52,19 @@ const useStateContent = (game) => {
 const WeakestClient = () => {
     const game = useGame(WEAKEST_API);
     const [connected, setConnected] = useAuth(WEAKEST_API);
-    const history = useHistory();
+    const navigate = useNavigate();
 
     if (!connected) return <PlayerAuth api={WEAKEST_API} setConnected={setConnected}/>;
     if (!game) return <Loading/>;
 
     const onLogout = () => {
         WEAKEST_API.logout();
-        history.push("/");
+        navigate("/");
     };
 
     return <GameClient>
         <Header><ExitButton onClick={onLogout}/></Header>
-        <Content>{useStateContent(game)}</Content>
+        <Content>{stateContent(game)}</Content>
     </GameClient>
 }
 

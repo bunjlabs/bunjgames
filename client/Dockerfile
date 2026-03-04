@@ -1,21 +1,28 @@
-FROM node:16-alpine3.15 AS builder
+# Build stage
+FROM node:24.10.0-alpine AS build
 
-RUN apk add --update --no-cache g++ make python2
 WORKDIR /app
+
+# Copy package files
 COPY package.json package-lock.json ./
-RUN npm install
 
-ENV NODE_ENV production
-ENV PATH="./node_modules/.bin:$PATH"
+# Install dependencies
+RUN npm ci --only=production=false
 
-COPY . ./
+# Copy source code
+COPY . .
 
+# Build the application
 RUN npm run build
 
-
+# Production stage
 FROM nginx:alpine
 
+# Copy custom nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=builder /app/public /app
 
+# Copy built application from build stage
+COPY --from=build /app/build /app
+
+# Start nginx
 CMD ["nginx", "-g", "daemon off;"]

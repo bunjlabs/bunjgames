@@ -1,5 +1,5 @@
 import React from "react";
-import {useHistory} from "react-router-dom";
+import {useNavigate} from "react-router-dom";
 
 import {
     useGame,
@@ -15,9 +15,11 @@ import {
 import {Content, Footer, FooterItem, GameAdmin, Header, TextContent} from "common/Admin";
 import {AdminAuth} from "common/Auth";
 
-import styles from "feud/Admin.scss";
+import styles from "feud/Admin.module.scss";
 import {FinalQuestions, Question} from "feud/Question";
-import {FaVolumeMute} from "react-icons/all";
+import {FaVolumeMute} from "react-icons/fa";
+import classNames from "classnames";
+import {FEUD_API} from "../index";
 
 
 const getStateName = (state) => {
@@ -27,7 +29,7 @@ const getStateName = (state) => {
 const Players = ({game}) => {
     return <VerticalList className={styles.players}>
         {game.players.map(player =>
-            <ListItem key={player.id} className={css(
+            <ListItem key={player.id} className={classNames(
                 styles.player,
                 player.id === game.answerer && styles.selected,
             )}>
@@ -37,7 +39,7 @@ const Players = ({game}) => {
     </VerticalList>
 };
 
-const useStateContent = (game) => {
+const stateContent = (game) => {
     const onAnswerClick = (answerId) => FEUD_API.answer(true, answerId);
 
     switch (game.state) {
@@ -57,7 +59,7 @@ const useStateContent = (game) => {
     }
 };
 
-const useControl = (game) => {
+const control = (game) => {
     const onNextClick = () => FEUD_API.next_state(game.state);
     const onSetAnswererClick = (playerId) => FEUD_API.set_answerer(playerId);
     const onWrongAnswerClick = () => FEUD_API.answer(false, 0);
@@ -104,12 +106,12 @@ const gameScore = (game) => {
 const FeudAdmin = () => {
     const game = useGame(FEUD_API, (_) => {}, (_) => {});
     const [connected, setConnected] = useAuth(FEUD_API);
-    const history = useHistory();
+    const navigate = useNavigate();
 
     const onSoundStop = () => FEUD_API.intercom("sound_stop");
     const onLogout = () => {
         FEUD_API.logout();
-        history.push("/admin");
+        navigate("/admin");
     };
 
     if (!connected) return <AdminAuth api={FEUD_API} setConnected={setConnected}/>;
@@ -123,11 +125,11 @@ const FeudAdmin = () => {
             <Button onClick={onLogout}>Logout</Button>
         </Header>
         <Content rightPanel={<Players game={game}/>}>
-            {useStateContent(game)}
+            {stateContent(game)}
         </Content>
         <Footer>
             <FooterItem className={styles.gameScore}>{gameScore(game)}</FooterItem>
-            <FooterItem>{useControl(game)}</FooterItem>
+            <FooterItem>{control(game)}</FooterItem>
         </Footer>
     </GameAdmin>
 }

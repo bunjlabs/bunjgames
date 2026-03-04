@@ -1,12 +1,13 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import styles from "info/InfoPage.scss";
+import styles from "info/InfoPage.module.scss";
+import classNames from "classnames";
 
 const MainPage = () => {
     return <div className={styles.body}>
         <div className={styles.header}>
             <div className={styles.title}>Bunjgames</div>
-            <div className={css(styles.textRight, styles.title)}><Link to={'/admin'}>Admin panel</Link></div>
+            <div className={classNames(styles.textRight, styles.title)}><Link to={'/admin'}>Admin panel</Link></div>
         </div>
         <div className={styles.category}>
             <div className={styles.subtitle}><Link to={'/about'}>About page</Link></div>
@@ -53,7 +54,7 @@ const AdminPage = () => {
     return <div className={styles.body}>
         <div className={styles.header}>
             <div className={styles.title}>Bunjgames</div>
-            <div className={css(styles.textRight, styles.title)}><Link to={'/'}>Home</Link></div>
+            <div className={classNames(styles.textRight, styles.title)}><Link to={'/'}>Home</Link></div>
         </div>
         <div className={styles.category}>
             <div className={styles.subtitle}>Whirligig:</div>
@@ -83,7 +84,7 @@ const AboutPage = () => {
     return <div className={styles.body}>
         <div className={styles.header}>
             <div className={styles.title}>Bunjgames</div>
-            <div className={css(styles.textRight, styles.title)}><Link to={'/'}>Home</Link></div>
+            <div className={classNames(styles.textRight, styles.title)}><Link to={'/'}>Home</Link></div>
         </div>
 
         <div className={styles.category}>
@@ -138,7 +139,7 @@ const AboutPage = () => {
 
             <div className={styles.subtitle}>content.xml structure:</div>
             <div className={styles.marginBottom}/>
-            <div className={css(styles.tab, styles.preWrap)}>{'<?xml version="1.0" encoding="utf-8"?>\n' +
+            <div className={classNames(styles.tab, styles.preWrap)}>{'<?xml version="1.0" encoding="utf-8"?>\n' +
             '<!DOCTYPE game>\n' +
             '<game>\n' +
             '    <items>  <!-- 13 items -->\n' +
@@ -187,7 +188,7 @@ const AboutPage = () => {
 
             <div>Text (XML) file with following structure:</div>
             <div className={styles.marginBottom}/>
-            <div className={css(styles.tab, styles.preWrap)}>{'<?xml version="1.0" encoding="UTF-8"?>\n' +
+            <div className={classNames(styles.tab, styles.preWrap)}>{'<?xml version="1.0" encoding="UTF-8"?>\n' +
                 '<!DOCTYPE game>\n' +
                 '<game>\n' +
                 '   <questions> <!-- Should contain a lot of questions, recommended amount is 100 - 200 -->\n' +

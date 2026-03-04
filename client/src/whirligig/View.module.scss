@@ -1,0 +1,45 @@
+@import "src/Colors";
+
+.media {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+
+  & > div {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+  }
+
+  img, video {
+    width: 95vw !important;
+    height: 95vh !important;
+    display: block;
+    object-fit: contain;
+  }
+
+  // When both image and video exist, split the space
+  &:has(img):has(video) {
+    img, video {
+      height: 47.5vh !important;
+    }
+  }
+
+  audio {
+
+  }
+}
+
+.score {
+  font-weight: bold;
+
+  p {
+    font-size: 30vmin !important;
+  }
+}

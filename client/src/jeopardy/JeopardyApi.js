@@ -1,4 +1,4 @@
-import GameApi from "../GameApi.js";
+import GameApi from "gameApi.js";
 
 const JEOPARDY_TOKEN = "JEOPARDY_TOKEN";
 const JEOPARDY_PLAYER_ID = "JEOPARDY_PLAYER_ID";

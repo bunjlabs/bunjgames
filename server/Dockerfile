@@ -1,19 +1,36 @@
-FROM python:3.10-slim
-
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends libpq-dev build-essential libffi-dev && \
-    apt-get install -y ffmpeg libavcodec-extra
+# Build stage
+FROM golang:1.22-alpine AS build
 
 WORKDIR /app
 
-COPY requirements.txt requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy go mod files
+COPY go.mod go.sum ./
 
-RUN apt-get purge -y build-essential libffi-dev
-RUN apt-get autoremove -y
-RUN apt-get clean
-RUN apt-get autoclean
+# Download dependencies
+RUN go mod download
 
-COPY . /app
+# Copy source code
+COPY . .
 
-CMD ["daphne", "-b", "0.0.0.0", "-p", "80", "server.asgi:application"]
+# Build the application
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o bunjgames-server .
+
+# Production stage
+FROM alpine:latest
+
+# Install ca-certificates for HTTPS requests
+RUN apk --no-cache add ca-certificates
+
+WORKDIR /root/
+
+# Copy the binary from build stage
+COPY --from=build /app/bunjgames-server .
+
+# Create media directory
+RUN mkdir -p media
+
+# Set environment variable for port (can be overridden)
+ENV PORT=80
+
+# Run the application
+CMD ["./bunjgames-server"]

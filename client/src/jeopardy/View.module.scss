@@ -1,0 +1,17 @@
+@import "src/common/Essentials.module";
+
+.media {
+  img, video {
+    width: 95vw !important;
+    height: 95vh !important;
+  }
+
+  img {
+    display: block;
+    object-fit: contain;
+  }
+
+  audio {
+
+  }
+}

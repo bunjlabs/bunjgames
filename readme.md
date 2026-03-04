@@ -1,3 +1,31 @@
+# bunjgames
+
+## development
+
+Run nginx docker to proxy client, server and media files:
+```
+docker run --name bunjgames-nginx \
+    --network host \
+    --volume ./server/media:/app/media:ro \
+    --volume ./nginx.dev.conf:/etc/nginx/nginx.conf:ro \
+    nginx
+```
+nginx proxy will be available at http://localhost:8080
+
+To build and run server:
+```
+cd server
+go build bunjgames-server
+./bunjgames-server
+```
+
+To build (pull dependencies) and run client:
+```
+cd client
+npm ci
+npm run start
+```
+
 # Whirligig game file specification.
 
 Zip archive file with structure:

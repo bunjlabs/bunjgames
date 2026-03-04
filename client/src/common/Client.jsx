@@ -1,16 +1,17 @@
 import React from "react";
 import {Toast} from "common/Essentials";
-import styles from "common/Client.scss";
-import {FaTimesCircle} from "react-icons/all";
+import styles from "common/Client.module.scss";
+import {FaTimesCircle} from "react-icons/fa";
+import classNames from "classnames";
 
 const ExitButton = ({onClick}) => (
-    <a className={styles.exit} onClick={() => {
-        if(confirm("Are you sure want to exit?")){
+    <button className={styles.exit} onClick={e => {
+        if(window.confirm("Are you sure want to exit?")){
             onClick();
         } else {
             e.preventDefault();
         }
-    }}><FaTimesCircle /></a>
+    }}><FaTimesCircle /></button>
 )
 
 const Header = ({children}) => (
@@ -30,7 +31,7 @@ const FormContent = ({children}) => (
 )
 
 const BigButtonContent = ({active, onClick, children}) => (
-    <div className={css(styles.bigButton, active && styles.active)} onClick={onClick} onTouchStart={onClick}>
+    <div className={classNames(styles.bigButton, active && styles.active)} onClick={onClick} onTouchStart={onClick}>
         {children}
     </div>
 )

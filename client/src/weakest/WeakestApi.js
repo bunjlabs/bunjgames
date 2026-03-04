@@ -1,4 +1,4 @@
-import GameApi from "../GameApi.js";
+import GameApi from "gameApi.js";
 
 const WEAKEST_TOKEN = "WEAKEST_TOKEN";
 const WEAKEST_PLAYER_ID = "WEAKEST_PLAYER_ID";

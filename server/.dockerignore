@@ -1,5 +1,29 @@
-/.idea
-/server.iml
+# Binaries
+bunjgames-server
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
 
-/venv
-/.git
+# Test binary
+*.test
+
+# Output of the go coverage tool
+*.out
+
+# IDE
+.idea
+*.iml
+.vscode
+
+# Media files (should be mounted as volume)
+media/*
+
+# Git
+.git
+.gitignore
+
+# OS
+.DS_Store
+Thumbs.db

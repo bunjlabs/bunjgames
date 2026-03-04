@@ -1,10 +1,10 @@
-import React, {useEffect, useState} from "react";
-import ReactPlayer from "react-player";
-import styles from "./Essentials.scss";
+import React, {useEffect, useState, useRef} from "react";
+import styles from "./Essentials.module.scss";
 import {ToastContainer} from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
 import {Link} from "react-router-dom";
 import {Howl} from "howler";
+import classNames from "classnames";
 
 const HowlWrapper = (src, loop = false, volume = 1.0) => {
     return new Howl({
@@ -14,19 +14,105 @@ const HowlWrapper = (src, loop = false, volume = 1.0) => {
         preload: false
     });
 }
-const getMediaUrl = (game, url) => url.startsWith("/") ? `${BunjGamesConfig.MEDIA}${game.name}/${game.token}${url}` : url;
+const getMediaUrl = (game, url) => url.startsWith("/") ? `/media/${game.name}/${game.token}${url}` : url;
 
 const ImagePlayer = ({game, url}) => (
-    <img src={getMediaUrl(game, url)} alt="Image"/>
+    <img src={getMediaUrl(game, url)} alt="Missing"/>
 );
 
-const AudioPlayer = ({game, url, controls, playing}) => (
-    <ReactPlayer controls={controls} playing={playing} url={getMediaUrl(game, url)} width="100%" height="100%"/>
-);
+const AudioPlayer = ({game, url, controls, playing}) => {
+    const audioUrl = getMediaUrl(game, url);
+    const audioRef = useRef(null);
 
-const VideoPlayer = ({game, url, controls, playing}) => (
-    <ReactPlayer controls={controls} playing={playing} url={getMediaUrl(game, url)} width="100%" height="100%"/>
-);
+    useEffect(() => {
+        const audio = audioRef.current;
+        if (!audio) return;
+
+        const handleCanPlay = () => {
+            if (playing) {
+                audio.play().catch(err => {
+                    console.warn('Audio autoplay prevented:', err);
+                });
+            }
+        };
+
+        audio.addEventListener('canplay', handleCanPlay);
+
+        // Try to play immediately if already loaded
+        if (playing && audio.readyState >= 3) {
+            audio.play().catch(err => {
+                console.warn('Audio autoplay prevented:', err);
+            });
+        }
+
+        return () => {
+            audio.removeEventListener('canplay', handleCanPlay);
+        };
+    }, [playing, audioUrl]);
+
+    return (
+        <audio
+            ref={audioRef}
+            src={audioUrl}
+            controls={controls}
+            style={{width: '100%'}}
+            preload="metadata"
+            onError={(e) => {
+                console.error('Audio error:', e.target.error);
+            }}
+        />
+    );
+};
+
+const VideoPlayer = ({game, url, controls, playing}) => {
+    const videoUrl = getMediaUrl(game, url);
+    const videoRef = useRef(null);
+
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video) return;
+
+        const handleCanPlay = () => {
+            if (playing) {
+                video.play().catch(err => {
+                    console.warn('Autoplay prevented:', err);
+                });
+            }
+        };
+
+        video.addEventListener('canplay', handleCanPlay);
+
+        // Try to play immediately if already loaded
+        if (playing && video.readyState >= 3) {
+            video.play().catch(err => {
+                console.warn('Autoplay prevented:', err);
+            });
+        }
+
+        return () => {
+            video.removeEventListener('canplay', handleCanPlay);
+        };
+    }, [playing, videoUrl]);
+
+    return (
+        <video
+            ref={videoRef}
+            src={videoUrl}
+            controls={controls}
+            width="100%"
+            height="100%"
+            style={{maxWidth: '100%', maxHeight: '100%'}}
+            preload="metadata"
+            playsInline
+            onError={(e) => {
+                console.error('Video error:', e.target.error);
+            }}
+            onLoadedMetadata={() => {
+                console.log('Video metadata loaded:', videoUrl);
+            }}
+        />
+    );
+};
 
 const Loading = () => (
     <div className={styles.loading}>Loading...</div>
@@ -47,41 +133,41 @@ const Toast = () => (
 )
 
 const Button = ({onClick, className, children}) => (
-    <div className={css(styles.button, className)} onClick={onClick}>{children}</div>
+    <div className={classNames(styles.button, className)} onClick={onClick}>{children}</div>
 );
 
 const OvalButton = ({onClick, className, children}) => (
-    <div className={css(styles.oval, styles.button, className)} onClick={onClick}>{children}</div>
+    <div className={classNames(styles.oval, styles.button, className)} onClick={onClick}>{children}</div>
 );
 
 const ButtonLink = ({to, className, children}) => (
-    <Link className={css(styles.button, className)} to={to}>{children}</Link>
+    <Link className={classNames(styles.button, className)} to={to}>{children}</Link>
 );
 
 const Input = ({type, onChange, value, className}) => (
-    <input className={css(className, styles.input)} type={type} onChange={onChange} value={value}/>
+    <input className={classNames(className, styles.input)} type={type} onChange={onChange} value={value}/>
 )
 
 const VerticalList = ({className, children}) => (
-    <div className={css(styles.verticalList, styles.list, className)}>
+    <div className={classNames(styles.verticalList, styles.list, className)}>
         {children}
     </div>
 );
 
 const HorizontalList = ({className, children}) => (
-    <div className={css(styles.horizontalList, styles.list, className)}>
+    <div className={classNames(styles.horizontalList, styles.list, className)}>
         {children}
     </div>
 );
 
 const ListItem = ({className, children, ...props}) => (
-    <div className={css(styles.listItem, className)} {...props}>
+    <div className={classNames(styles.listItem, className)} {...props}>
         {children}
     </div>
 );
 
 const TwoLineListItem = ({className, children, ...props}) => (
-    <div className={css(styles.twoLineListItem, styles.listItem, className)} {...props}>
+    <div className={classNames(styles.twoLineListItem, styles.listItem, className)} {...props}>
         {children}
     </div>
 );
@@ -98,14 +184,14 @@ const useGame = (api, onState=() => {}, onIntercom=() => {}) => {
             api.getStateSubscriber().unsubscribe(stateId);
             api.getIntercomSubscriber().unsubscribe(intercomId);
         }
-    }, []);
+    }, [api, onIntercom, onState]);
 
     return game;
 }
 
 const useAuth = (api) => {
     const [connected, setConnected] = useState();
-    useEffect(() => setConnected(api.isConnected()), []);
+    useEffect(() => setConnected(api.isConnected()), [api]);
     return [connected, setConnected];
 }
 

@@ -1,5 +1,5 @@
 import React, {useState} from "react";
-import {useHistory} from "react-router-dom";
+import {useNavigate} from "react-router-dom";
 
 import {
     Loading,
@@ -14,8 +14,9 @@ import {
 import {AdminAuth} from "common/Auth";
 import {BlockContent, Content, Footer, FooterItem, GameAdmin, Header, TextContent} from "common/Admin";
 
-import styles from "whirligig/Admin.scss";
-import {FaCheckSquare, FaMinus, FaPlus, FaSquare, FaVolumeMute} from "react-icons/all";
+import styles from "whirligig/Admin.module.scss";
+import {FaCheckSquare, FaMinus, FaPlus, FaSquare, FaVolumeMute} from "react-icons/fa";
+import {WHIRLIGIG_API} from "../index";
 
 
 const getStatusName = (status) => {
@@ -40,18 +41,19 @@ const getStatusName = (status) => {
             return "Question end";
         case 'end':
             return "Game over";
+        default:
+            return "";
     }
 }
 
 const ItemQuestion = ({question, single}) => {
-    const {number, is_processed, description, answer_description} = question;
+    const {is_processed, description, answer_description} = question;
     const checkbox = (is_processed)
         ? <FaCheckSquare />
         : <FaSquare />
 
     return <div className={styles.question}>
-        {single || <div>{number}: {checkbox}</div>}
-        <div>Question: {description}</div>
+        <div>{single || <div style={{float: "right", margin: 10}}>{checkbox}</div>} Question: {description}</div>
         <div>Answer: {answer_description}</div>
     </div>
 };
@@ -74,7 +76,7 @@ const Item = ({item}) => {
 
     return <div className={styles.item}>
         <div className={styles.short} onClick={() => select(!isSelected)}>
-            <div className={styles.desc}>{name}: {description}</div>
+            <div className={styles.desc}>{description || name}</div>
             <div className={styles.processed}>{checkbox}</div>
         </div>
         {isSelected && <ItemQuestions questions={item.questions}/>}
@@ -138,7 +140,7 @@ const ScoreControl = ({game}) => {
     </div>
 };
 
-const useStateContent = (game) => {
+const stateContent = (game) => {
     const QuestionInfo = ({game}) => {
         return [
             <div key={1}>{getStatusName(game.state)}</div>,
@@ -147,8 +149,8 @@ const useStateContent = (game) => {
                 {game.cur_item.description && <div>Description: {game.cur_item.description}</div>}
                 <div>Type: {game.cur_item.type}</div>
             </div>,
-            game.cur_question.author_name && <div key={3}>
-                <div>Author: {game.cur_question.author_name}, {game.cur_question.author_city}</div>
+            game.cur_question.author && <div key={3}>
+                <div>Author: {game.cur_question.author}</div>
             </div>
         ]
     }
@@ -158,8 +160,8 @@ const useStateContent = (game) => {
         return <BlockContent>
             {game.items.map((item, index) => (
                 <div key={index}>
-                    {item.questions.length === 1 && Boolean(item.questions[0].author_city)
-                        ? (index === 12 ? "13 - " : "") + item.questions[0].author_name + ', ' + item.questions[0].author_city
+                    {item.questions.length === 1 && Boolean(item.questions[0].author)
+                        ? (index === 12 ? "13 - " : "") + item.questions[0].author
                         : item.name}
                 </div>
             ))}
@@ -201,7 +203,7 @@ const useStateContent = (game) => {
     </BlockContent>
 };
 
-const useControl = (game) => {
+const control = (game) => {
     const onGongClick = () => WHIRLIGIG_API.intercom("gong");
     const onAnswerClick = (isCorrect) => WHIRLIGIG_API.answerCorrect(isCorrect);
     const onNextClick = () => WHIRLIGIG_API.nextState(game.state);
@@ -231,12 +233,12 @@ const useControl = (game) => {
 const WhirligigAdmin = () => {
     const game = useGame(WHIRLIGIG_API);
     const [connected, setConnected] = useAuth(WHIRLIGIG_API);
-    const history = useHistory();
+    const navigate = useNavigate();
 
     const onSoundStop = () => WHIRLIGIG_API.intercom("sound_stop");
     const onLogout = () => {
         WHIRLIGIG_API.logout();
-        history.push("/admin");
+        navigate("/admin");
     };
 
     if (!connected) return <AdminAuth api={WHIRLIGIG_API} setConnected={setConnected}/>;
@@ -250,11 +252,11 @@ const WhirligigAdmin = () => {
             <Button onClick={onLogout}>Logout</Button>
         </Header>
         <Content rightPanel={[<Items items={game.items || []}/>, <ScoreControl game={game}/>]}>
-            {useStateContent(game)}
+            {stateContent(game)}
         </Content>
         <Footer>
             <FooterItem className={styles.score}>{game.connoisseurs_score} : {game.viewers_score}</FooterItem>
-            <FooterItem>{useControl(game)}</FooterItem>
+            <FooterItem>{control(game)}</FooterItem>
         </Footer>
     </GameAdmin>
 }

@@ -1,9 +1,11 @@
 import React from "react";
-import styles from "./Themes.scss";
-import {FaCat, RiAuctionFill} from "react-icons/all";
+import styles from "./Themes.module.scss";
+import {FaCat} from "react-icons/fa";
+import {RiAuctionFill} from "react-icons/ri"
+import classNames from "classnames";
 
 const Theme = ({theme, onSelect, active = false}) => (
-    <div className={css(active && styles.active, styles.theme)}
+    <div className={classNames(active && styles.active, styles.theme)}
          onClick={() => !theme.is_removed && onSelect(theme.id)}
          title={theme.name + "\n" + (theme.comment ?? "")}>
         <div>{!theme.is_removed && theme.name}</div>
@@ -11,7 +13,7 @@ const Theme = ({theme, onSelect, active = false}) => (
 );
 
 const Question = ({question, onSelect}) => (
-    <div className={css(!question.is_processed && styles.active, styles.question)}
+    <div className={classNames(!question.is_processed && styles.active, styles.question)}
          onClick={() => !question.is_processed && onSelect(question.id)}>
         <div>
             {!question.is_processed && onSelect && question.type === "bagcat" && <FaCat/>}

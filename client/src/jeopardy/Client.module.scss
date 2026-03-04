@@ -1,0 +1,106 @@
+@import "src/common/Essentials.module";
+
+.client {
+  height: 100%;
+  width: 100%;
+  background-color: $baseBackground;
+  color: $baseTextColor;
+
+  display: flex;
+  @media (orientation: landscape) {
+    flex-direction: row;
+  }
+
+  @media (orientation: portrait) {
+    flex-direction: column;
+  }
+
+  .content {
+    flex-grow: 1;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    .playerButton {
+      width: 90vmin;
+      height: 90vmin;
+
+      border-radius: 50%;
+      border: 4px solid $baseBackgroundDark;
+      background-color: $baseBackgroundButton;
+
+      box-shadow: 0 8px 0 $baseBackgroundDark;
+
+      &.active {
+        background-color: #c63939;
+
+        &:active {
+          transform: translateY(8px);
+          box-shadow: none;
+        }
+      }
+    }
+
+    .form {
+      :not(:last-child) {
+        margin-bottom: 10px;
+      }
+    }
+
+    .text {
+      font-size: 40px;
+      font-weight: bold;
+    }
+  }
+
+  .players {
+    display: flex;
+    justify-content: space-around;
+    flex-direction: column;
+
+    :not(:last-child) {
+      margin-bottom: 4px;
+    }
+
+    .player {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      flex-basis: 0;
+      font-size: 16px;
+      min-height: 50px;
+
+      @media (orientation: landscape) {
+        max-width: 25vw;
+        min-width: 15vw;
+      }
+
+      flex-grow: 1;
+      padding: 3px 5px;
+
+      background-color: $baseBackgroundDark;
+
+      & > div {
+        word-break: break-all;
+        word-wrap: anywhere;
+        text-align: center;
+      }
+
+      :first-child {
+        font-weight: bold;
+        font-size: 18px;
+      }
+
+      &.selected {
+        background-color: $baseBackgroundSelect !important;
+        color: $baseTextColorSelect;
+      }
+
+      &.self {
+        background-color: $baseBackgroundButton;
+      }
+    }
+  }
+}

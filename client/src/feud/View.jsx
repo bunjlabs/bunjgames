@@ -3,9 +3,10 @@ import {Loading, useGame, useAuth, HowlWrapper} from "common/Essentials";
 import {AdminAuth} from "common/Auth";
 import {Content, ExitButton, GameView, TextContent, QRCodeContent} from "common/View";
 import {FinalQuestions, Question} from "feud/Question";
-import styles from "feud/View.scss";
-import {useHistory} from "react-router-dom";
+import styles from "feud/View.module.scss";
+import {useNavigate} from "react-router-dom";
 import {generateClientUrl} from "../common/View";
+import {FEUD_API} from "../index";
 
 const Music = {
     intro: HowlWrapper('/sounds/feud/intro.mp3'),
@@ -39,7 +40,7 @@ const changeMusic = (old, next) => {
     }
 }
 
-const useStateContent = (game) => {
+const stateContent = (game) => {
     const answerer = game.answerer && game.players.find(t => t.id === game.answerer);
     switch (game.state) {
         case "waiting_for_players":
@@ -99,6 +100,8 @@ const FeudView = () => {
             case "sound_stop":
                 setMusic(changeMusic(music, ""));
                 break;
+            default:
+                break;
         }
     });
 
@@ -111,10 +114,10 @@ const FeudView = () => {
 
     const [connected, setConnected] = useAuth(FEUD_API);
 
-    const history = useHistory();
+    const navigate = useNavigate();
     const onLogout = () => {
         FEUD_API.logout();
-        history.push("/admin");
+        navigate("/admin");
     };
 
     if (!connected) return <AdminAuth api={FEUD_API} setConnected={setConnected}/>;
@@ -122,7 +125,7 @@ const FeudView = () => {
 
     return <GameView>
         <ExitButton onClick={onLogout}/>
-        <Content>{useStateContent(game)}</Content>
+        <Content>{stateContent(game)}</Content>
     </GameView>
 }
 

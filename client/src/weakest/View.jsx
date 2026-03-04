@@ -2,9 +2,10 @@ import React, {useEffect, useState} from "react";
 import {Loading, useGame, useAuth, useTimer, HowlWrapper} from "common/Essentials";
 import {AdminAuth} from "common/Auth";
 import {Content, GameView, TextContent, BlockContent, ExitButton, QRCodeContent} from "common/View";
-import {useHistory} from "react-router-dom";
+import {useNavigate} from "react-router-dom";
 import FinalQuestions from "weakest/FinalQuestions";
 import {generateClientUrl} from "../common/View";
+import {WEAKEST_API} from "../index";
 
 const Music = {
     intro: HowlWrapper('/sounds/weakest/intro.mp3'),
@@ -50,7 +51,7 @@ const MFinalQuestions = ({game}) => {
     </BlockContent>;
 }
 
-const useStateContent = (game) => {
+const stateContent = (game) => {
     switch (game.state) {
         case "waiting_for_players":
             return <QRCodeContent value={generateClientUrl('/weakest/client?token=' + game.token)}>
@@ -101,6 +102,8 @@ const WeakestView = () => {
             case "sound_stop":
                 setMusic(changeMusic(music, ""));
                 break;
+            default:
+                break;
         }
     });
 
@@ -113,10 +116,10 @@ const WeakestView = () => {
 
     const [connected, setConnected] = useAuth(WEAKEST_API);
 
-    const history = useHistory();
+    const navigate = useNavigate();
     const onLogout = () => {
         WEAKEST_API.logout();
-        history.push("/admin");
+        navigate("/admin");
     };
 
     if (!connected) return <AdminAuth api={WEAKEST_API} setConnected={setConnected}/>;
@@ -124,7 +127,7 @@ const WeakestView = () => {
 
     return <GameView>
         <ExitButton onClick={onLogout}/>
-        <Content>{useStateContent(game)}</Content>
+        <Content>{stateContent(game)}</Content>
     </GameView>
 }
 

@@ -1,11 +1,13 @@
 import React, {useEffect, useState} from "react";
-import {useHistory} from "react-router-dom";
+import {useNavigate} from "react-router-dom";
 
 import {HowlWrapper, Loading, Toast, useAuth, useGame} from "common/Essentials";
 import {PlayerAuth} from "common/Auth";
 import {ExitButton, Header} from "common/Client";
 
-import styles from "jeopardy/Client.scss";
+import styles from "jeopardy/Client.module.scss";
+import {JEOPARDY_API} from "../index";
+import classNames from "classnames";
 
 
 const Sounds = {
@@ -57,7 +59,7 @@ const Content = ({game}) => {
     }
 
     if(["question", "answer"].includes(game.state)) {
-        content = <div className={css(styles.playerButton,  buttonActive && styles.active)} onClick={onButton} onTouchStart={onButton}/>
+        content = <div className={classNames(styles.playerButton,  buttonActive && styles.active)} onClick={onButton} onTouchStart={onButton}/>
     } else if(["final_bets"].includes(game.state) && player.final_bet === 0) {
         content = <FinalBet />
     } else if (["final_answer"].includes(game.state) && !player.final_answer) {
@@ -71,7 +73,7 @@ const Content = ({game}) => {
 }
 
 const Player = ({player, selected, self}) => {
-    return <div className={css(styles.player, self && styles.self, selected && styles.selected)}>
+    return <div className={classNames(styles.player, self && styles.self, selected && styles.selected)}>
         <div>{player.balance}</div>
         <div>{player.name}</div>
     </div>
@@ -94,7 +96,7 @@ const JeopardyClient = () => {
         }
     });
     const [connected, setConnected] = useAuth(JEOPARDY_API);
-    const history = useHistory();
+    const navigate = useNavigate();
 
     useEffect(loadSounds, []);
 
@@ -103,7 +105,7 @@ const JeopardyClient = () => {
 
     const onLogout = () => {
         JEOPARDY_API.logout();
-        history.push("/");
+        navigate("/");
     };
 
     return <div className={styles.client}>
