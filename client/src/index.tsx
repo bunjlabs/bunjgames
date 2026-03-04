@@ -29,13 +29,13 @@ export const BunjGamesConfig = {
     COMMON_API_ENDPOINT: "/api/common/",
 
     WHIRLIGIG_API_ENDPOINT: "/api/whirligig/",
-    WHIRLIGIG_WS_ENDPOINT: "ws://localhost:8000/ws/whirligig/",
+    WHIRLIGIG_WS_ENDPOINT: "/ws/whirligig/",
 
     JEOPARDY_API_ENDPOINT: "/api/jeopardy/",
     JEOPARDY_WS_ENDPOINT: "/ws/jeopardy/",
 
     WEAKEST_API_ENDPOINT: "/api/weakest/",
-    WEAKEST_WS_ENDPOINT: "ws://localhost:800/ws/weakest/",
+    WEAKEST_WS_ENDPOINT: "/ws/weakest/",
 
     FEUD_API_ENDPOINT: "/api/feud/",
     FEUD_WS_ENDPOINT: "/ws/feud/",

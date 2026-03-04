@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  bunjgames_server:
+    image: bunjdo/bunjgames-server:latest
+    networks:
+      - bunjgames-network
+    volumes:
+      - bunjgames-media:/root/media
+    environment:
+      - PORT=80
+    restart: unless-stopped
+
+  bunjgames_client:
+    image: bunjdo/bunjgames-client:latest
+    networks:
+      - bunjgames-network
+    restart: unless-stopped
+
+  bunjgames-nginx:
+    image: nginx:alpine
+    ports:
+      - "8194:80"
+    networks:
+      - bunjgames-network
+    volumes:
+      - bunjgames-media:/app/media:ro
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    restart: unless-stopped
+    depends_on:
+      - bunjgames_server
+      - bunjgames_client
+
+networks:
+  bunjgames-network:
+    driver: overlay
+    attachable: true
+
+volumes:
+  bunjgames-media:

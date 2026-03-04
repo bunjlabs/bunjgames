@@ -275,19 +275,7 @@ func (g *Game) Parse(filename string) error {
 		return &common.BadFormatError{Msg: "Too many items"}
 	}
 
-	// Debug: Check first question's answer_description after parsing
-	if len(items) > 0 && len(items[0].Questions) > 0 {
-		log.Printf("Parse [%s]: First question answer_description length=%d", filename, len(items[0].Questions[0].AnswerDescription))
-	}
-
 	g.Items = items
-
-	// Debug: Check after assignment
-	if len(g.Items) > 0 && len(g.Items[0].Questions) > 0 {
-		log.Printf("Parse [%s]: After assignment, answer_description length=%d, pointer=%p",
-			filename, len(g.Items[0].Questions[0].AnswerDescription), &g.Items[0].Questions[0])
-	}
-
 	return nil
 }
 
@@ -309,13 +297,6 @@ type GameState struct {
 }
 
 func (g *Game) Serialize() GameState {
-	// Debug logging
-	if len(g.Items) > 0 && len(g.Items[0].Questions) > 0 {
-		log.Printf("Serialize: First question answer_description length: %d, value: %q",
-			len(g.Items[0].Questions[0].AnswerDescription),
-			g.Items[0].Questions[0].AnswerDescription)
-	}
-
 	questionStates := []State{
 		StateQuestionWhirligig, StateQuestionStart, StateQuestionDiscussion,
 		StateAnswer, StateRightAnswer,
