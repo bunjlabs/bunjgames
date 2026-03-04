@@ -1,5 +1,26 @@
 version: '3.8'
+
 services:
+  bunjgames_server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: bunjgames-server
+    volumes:
+      - ./server/media:/root/media
+    ports:
+      - "8000:80"
+    restart: unless-stopped
+
+  bunjgames_client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: bunjgames-client
+    ports:
+      - "3000:80"
+    restart: unless-stopped
+
   bunjgames-nginx:
     image: nginx
     container_name: bunjgames-nginx
@@ -7,3 +28,7 @@ services:
     volumes:
       - ./server/media:/app/media:ro
       - ./nginx.dev.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - bunjgames_server
+      - bunjgames_client
+    restart: unless-stopped
