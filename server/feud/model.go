@@ -1,10 +1,11 @@
 package feud
 
 import (
+	"encoding/xml"
 	"sync"
 	"time"
 
-	"bunjgames-server/common"
+	"bunjgames/common"
 )
 
 const (
@@ -29,35 +30,35 @@ type Answer struct {
 }
 
 type Question struct {
-	ID          int
-	Text        string
-	IsFinal     bool
-	IsProcessed bool
-	Answers     []*Answer
+	ID          int       `json:"id"`
+	Text        string    `json:"text"`
+	IsFinal     bool      `json:"is_final"`
+	IsProcessed bool      `json:"is_processed"`
+	Answers     []*Answer `json:"answers"`
 }
 
 type Player struct {
-	ID         int
-	Name       string
-	Strikes    int
-	Score      int
-	FinalScore int
+	ID         int    `json:"id"`
+	Name       string `json:"name"`
+	Strikes    int    `json:"strikes"`
+	Score      int    `json:"score"`
+	FinalScore int    `json:"final_score"`
 }
 
 type Game struct {
-	Mu sync.Mutex
+	Mu sync.Mutex `json:"-"`
 
 	common.IntercomQueue
 
-	Token     string
-	Expired   time.Time
-	Round     int
-	State     string
-	Questions []*Question
-	Players   []*Player
-	Question  *Question
-	Answerer  *Player
-	Timer     int64
+	Token     string      `json:"token"`
+	Expired   time.Time   `json:"expired"`
+	Round     int         `json:"round"`
+	State     string      `json:"state"`
+	Questions []*Question `json:"-"`
+	Players   []*Player   `json:"players"`
+	Question  *Question   `json:"question"`
+	Answerer  *Player     `json:"-"`
+	Timer     int64       `json:"timer"`
 }
 
 func NewGame() *Game {
@@ -383,11 +384,40 @@ func (g *Game) AddPlayer(name string) *Player {
 	return p
 }
 
+func (g *Game) ProcessCommand(method string, params map[string]any) error {
+	switch method {
+	case "next_state":
+		fromState := common.OptStringParam(params, "from_state")
+		return g.NextState(fromState)
+	case "button_click":
+		pid, e := common.IntParam(params, "player_id")
+		if e != nil {
+			return e
+		}
+		return g.ButtonClick(pid)
+	case "set_answerer":
+		pid, e := common.IntParam(params, "player_id")
+		if e != nil {
+			return e
+		}
+		return g.SetAnswerer(pid)
+	case "answer":
+		isCorrect, e := common.BoolParam(params, "is_correct")
+		if e != nil {
+			return e
+		}
+		answerID := common.OptIntParam(params, "answer_id")
+		return g.AnswerQuestion(isCorrect, answerID)
+	default:
+		return &common.BadFormatError{Msg: "Unknown method"}
+	}
+}
+
 // --- Parse ---
 
-func (g *Game) Parse(filename string) error {
-	root, err := common.ParseXMLFile(filename)
-	if err != nil {
+func (g *Game) Parse(data []byte) error {
+	var root common.XMLElement
+	if err := xml.Unmarshal(data, &root); err != nil {
 		return &common.BadFormatError{Msg: "Cannot parse XML"}
 	}
 
@@ -460,110 +490,30 @@ func (g *Game) Parse(filename string) error {
 
 // --- Serialization ---
 
-type AnswerState struct {
-	ID              int    `json:"id"`
-	Text            string `json:"text"`
-	Value           int    `json:"value"`
-	IsOpened        bool   `json:"is_opened"`
-	IsFinalAnswered bool   `json:"is_final_answered"`
-}
-
-type QuestionState struct {
-	ID          int           `json:"id"`
-	Text        string        `json:"text"`
-	Answers     []AnswerState `json:"answers"`
-	IsProcessed bool          `json:"is_processed"`
-}
-
-type PlayerState struct {
-	ID         int    `json:"id"`
-	Name       string `json:"name"`
-	Strikes    int    `json:"strikes"`
-	Score      int    `json:"score"`
-	FinalScore int    `json:"final_score"`
-}
-
 type GameState struct {
-	Token          string          `json:"token"`
-	Expired        time.Time       `json:"expired"`
-	Round          int             `json:"round"`
-	State          string          `json:"state"`
-	Question       *QuestionState  `json:"question"`
-	Answerer       *int            `json:"answerer"`
-	FinalQuestions []QuestionState `json:"final_questions"`
-	Timer          int64           `json:"timer"`
-	Players        []PlayerState   `json:"players"`
-	Name           string          `json:"name"`
-}
-
-func serializeQuestion(q *Question) *QuestionState {
-	if q == nil {
-		return nil
-	}
-	answers := make([]AnswerState, 0, len(q.Answers))
-	for _, a := range q.Answers {
-		answers = append(answers, AnswerState{
-			ID:              a.ID,
-			Text:            a.Text,
-			Value:           a.Value,
-			IsOpened:        a.IsOpened,
-			IsFinalAnswered: a.IsFinalAnswered,
-		})
-	}
-	return &QuestionState{
-		ID:          q.ID,
-		Text:        q.Text,
-		Answers:     answers,
-		IsProcessed: q.IsProcessed,
-	}
-}
-
-func serializeQuestionOpenedOnly(q *Question) QuestionState {
-	var answers []AnswerState
-	for _, a := range q.Answers {
-		if a.IsOpened {
-			answers = append(answers, AnswerState{
-				ID:              a.ID,
-				Text:            a.Text,
-				Value:           a.Value,
-				IsOpened:        a.IsOpened,
-				IsFinalAnswered: a.IsFinalAnswered,
-			})
-		}
-	}
-	if answers == nil {
-		answers = []AnswerState{}
-	}
-	return QuestionState{
-		ID:          q.ID,
-		Text:        q.Text,
-		Answers:     answers,
-		IsProcessed: q.IsProcessed,
-	}
+	Token          string      `json:"token"`
+	Expired        time.Time   `json:"expired"`
+	Round          int         `json:"round"`
+	State          string      `json:"state"`
+	Question       *Question   `json:"question"`
+	Answerer       *int        `json:"answerer"`
+	FinalQuestions []*Question `json:"final_questions"`
+	Timer          int64       `json:"timer"`
+	Players        []*Player   `json:"players"`
+	Name           string      `json:"name"`
 }
 
 func (g *Game) Serialize() GameState {
-	playerStates := make([]PlayerState, 0, len(g.Players))
-	for _, p := range g.Players {
-		playerStates = append(playerStates, PlayerState{
-			ID:         p.ID,
-			Name:       p.Name,
-			Strikes:    p.Strikes,
-			Score:      p.Score,
-			FinalScore: p.FinalScore,
-		})
-	}
-
 	var answererID *int
 	if g.Answerer != nil {
 		answererID = &g.Answerer.ID
 	}
 
-	var finalQuestions []QuestionState
+	var finalQuestions []*Question
 	if g.State == StateFinalQuestionsReveal {
 		for _, q := range g.Questions {
 			if q.IsFinal {
-				finalQuestions = append(finalQuestions, serializeQuestionOpenedOnly(q))
+				finalQuestions = append(finalQuestions, q)
 			}
 		}
 	}
@@ -573,11 +523,11 @@ func (g *Game) Serialize() GameState {
 		Expired:        g.Expired,
 		Round:          g.Round,
 		State:          g.State,
-		Question:       serializeQuestion(g.Question),
+		Question:       g.Question,
 		Answerer:       answererID,
 		FinalQuestions: finalQuestions,
 		Timer:          g.Timer,
-		Players:        playerStates,
+		Players:        g.Players,
 		Name:           "feud",
 	}
 }

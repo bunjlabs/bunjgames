@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"math/big"
 	"net/http"
 	"net/url"
@@ -84,15 +85,16 @@ func (s *Store[T]) Exists(token string) bool {
 	return ok
 }
 
-func (s *Store[T]) GenerateUniqueToken() string {
+func (s *Store[T]) GenerateUniqueToken() (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	for {
+	for i := 0; i < 3; i++ {
 		token := GenerateToken()
 		if _, exists := s.games[token]; !exists {
-			return token
+			return token, nil
 		}
 	}
+	return "", fmt.Errorf("failed to generate unique token after 3 attempts")
 }
 
 // --- Param Helpers ---
@@ -252,4 +254,116 @@ func (q *IntercomQueue) DrainIntercoms() []string {
 	msgs := q.pending
 	q.pending = nil
 	return msgs
+}
+
+// --- Generic Create Game Handler ---
+
+type CreateGameConfig struct {
+	TempDirPrefix string
+	FileExtension string
+	MediaSubdir   string
+	NeedsUnzip    bool
+}
+
+func CreateGameHandler[T any](
+	store *Store[T],
+	newGame func(token string) *T,
+	parseGame func(*T, any) error,
+	serializeGame func(*T) any,
+	config CreateGameConfig,
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		file, _, err := r.FormFile("game")
+		if err != nil {
+			ErrorResponse(w, http.StatusBadRequest, "Missing game file")
+			return
+		}
+		defer file.Close()
+
+		token, err := store.GenerateUniqueToken()
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, "Failed to generate unique token")
+			return
+		}
+		game := newGame(token)
+
+		tmpDir, err := os.MkdirTemp("", config.TempDirPrefix)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, "Failed to create temp dir")
+			return
+		}
+		defer os.RemoveAll(tmpDir)
+
+		tmpFile := filepath.Join(tmpDir, "game"+config.FileExtension)
+		out, err := os.Create(tmpFile)
+		if err != nil {
+			ErrorResponse(w, http.StatusInternalServerError, "Failed to save file")
+			return
+		}
+		if _, err := io.Copy(out, file); err != nil {
+			out.Close()
+			ErrorResponse(w, http.StatusInternalServerError, "Failed to write file")
+			return
+		}
+		out.Close()
+
+		var parseData any = tmpFile
+		var gamePath string
+
+		if config.NeedsUnzip {
+			gamePath = filepath.Join("media", config.MediaSubdir, token)
+			os.MkdirAll(gamePath, 0755)
+
+			if err := Unzip(tmpFile, gamePath); err != nil {
+				os.RemoveAll(gamePath)
+				ErrorResponse(w, http.StatusBadRequest, "Bad game file")
+				return
+			}
+
+			yamlFile := filepath.Join(gamePath, "content.yaml")
+			xmlFile := filepath.Join(gamePath, "content.xml")
+
+			contentData, err := os.ReadFile(yamlFile)
+			if err != nil {
+				contentData, err = os.ReadFile(xmlFile)
+				if err != nil {
+					os.RemoveAll(gamePath)
+					ErrorResponse(w, http.StatusBadRequest, "Cannot read content file (tried yaml and xml)")
+					return
+				}
+			}
+			parseData = contentData
+		} else {
+			// Read XML file directly
+			contentData, err := os.ReadFile(tmpFile)
+			if err != nil {
+				ErrorResponse(w, http.StatusInternalServerError, "Failed to read file")
+				return
+			}
+			parseData = contentData
+		}
+
+		if err := parseGame(game, parseData); err != nil {
+			if config.NeedsUnzip {
+				os.RemoveAll(gamePath)
+			}
+			if bfe, ok := err.(*BadFormatError); ok {
+				ErrorResponse(w, http.StatusBadRequest, bfe.Msg)
+			} else {
+				log.Printf("Parse error: %v", err)
+				ErrorResponse(w, http.StatusBadRequest, "Bad game file")
+			}
+			return
+		}
+
+		if config.NeedsUnzip && gamePath != "" {
+			entries, _ := os.ReadDir(gamePath)
+			if len(entries) == 0 {
+				os.Remove(gamePath)
+			}
+		}
+
+		store.Set(token, game)
+		JSONResponse(w, serializeGame(game))
+	}
 }

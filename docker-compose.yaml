@@ -28,7 +28,4 @@ services:
     volumes:
       - ./server/media:/app/media:ro
       - ./nginx.dev.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - bunjgames_server
-      - bunjgames_client
     restart: unless-stopped

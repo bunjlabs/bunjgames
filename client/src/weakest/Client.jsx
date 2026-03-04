@@ -18,7 +18,7 @@ const Players = ({game, player, onClick}) => {
                 className={classNames(
                     styles.player,
                     p.id === player.id && styles.self,
-                    p.id === player.weak && styles.selected,
+                    p.id === player.weak_id && styles.selected,
                     p.id !== player.id && styles.active
                 )}
                 onClick={() => p.id !== player.id && onClick(p.id)}

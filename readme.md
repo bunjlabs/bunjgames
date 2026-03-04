@@ -75,7 +75,26 @@ game packs - https://vladimirkhil.com/si/storage
 
 # Weakest
 
-Text (XML) file with following structure:
+YAML file with the following structure (content.yaml):
+~~~yaml
+questions:  # Should contain a lot of questions, recommended amount is 100 - 200
+  - question: "Question text"  # string
+    answer: "Answer text"  # string
+  - question: "Another question"
+    answer: "Another answer"
+  ...
+
+final_questions:  # Minimum 10 questions (must be even number), recommended 20
+  - question: "Final question text"
+    answer: "Final answer text"
+  - question: "Another final question"
+    answer: "Another final answer"
+  ...
+
+score_multiplier: 1  # integer, determines the score multiplier
+~~~
+
+Legacy XML format is also supported:
 ~~~
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE game>

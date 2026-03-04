@@ -2,7 +2,6 @@ package common
 
 import (
 	"encoding/xml"
-	"os"
 	"strings"
 )
 
@@ -13,18 +12,6 @@ type XMLElement struct {
 	Attrs    []xml.Attr   `xml:",any,attr"`
 	Content  string       `xml:",chardata"`
 	Children []XMLElement `xml:",any"`
-}
-
-func ParseXMLFile(filename string) (*XMLElement, error) {
-	data, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
-	var root XMLElement
-	if err := xml.Unmarshal(data, &root); err != nil {
-		return nil, err
-	}
-	return &root, nil
 }
 
 func (e *XMLElement) Find(name string) *XMLElement {
