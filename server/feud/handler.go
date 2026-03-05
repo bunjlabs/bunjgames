@@ -2,11 +2,7 @@ package feud
 
 import (
 	"encoding/json"
-	"io"
-	"log"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"bunjgames-server/common"
@@ -14,47 +10,26 @@ import (
 
 var GameStore = common.NewStore[Game]()
 
-func CreateHandler(w http.ResponseWriter, r *http.Request) {
-	file, _, err := r.FormFile("game")
-	if err != nil {
-		common.ErrorResponse(w, http.StatusBadRequest, "Missing game file")
-		return
-	}
-	defer file.Close()
-
-	game := NewGame()
-	token := GameStore.GenerateUniqueToken()
-	game.Token = token
-
-	tmpDir, err := os.MkdirTemp("", "feud-*")
-	if err != nil {
-		common.ErrorResponse(w, http.StatusInternalServerError, "Failed to create temp dir")
-		return
-	}
-	defer os.RemoveAll(tmpDir)
-
-	tmpFile := filepath.Join(tmpDir, "game.xml")
-	out, err := os.Create(tmpFile)
-	if err != nil {
-		common.ErrorResponse(w, http.StatusInternalServerError, "Failed to save file")
-		return
-	}
-	io.Copy(out, file)
-	out.Close()
-
-	if err := game.Parse(tmpFile); err != nil {
-		if bfe, ok := err.(*common.BadFormatError); ok {
-			common.ErrorResponse(w, http.StatusBadRequest, bfe.Msg)
-		} else {
-			log.Printf("Parse error: %v", err)
-			common.ErrorResponse(w, http.StatusBadRequest, "Bad game file")
-		}
-		return
-	}
-
-	GameStore.Set(token, game)
-	common.JSONResponse(w, game.Serialize())
-}
+var CreateHandler = common.CreateGameHandler(
+	GameStore,
+	func(token string) *Game {
+		game := NewGame()
+		game.Token = token
+		return game
+	},
+	func(game *Game, data any) error {
+		return game.Parse(data.([]byte))
+	},
+	func(game *Game) any {
+		return game.Serialize()
+	},
+	common.CreateGameConfig{
+		TempDirPrefix: "feud-*",
+		FileExtension: ".xml",
+		MediaSubdir:   "",
+		NeedsUnzip:    false,
+	},
+)
 
 func RegisterPlayerHandler(w http.ResponseWriter, r *http.Request) {
 	var body struct {
@@ -124,37 +99,10 @@ func NewConsumer(hub *common.Hub) *common.ConsumerHandler {
 			game.Mu.Lock()
 			defer game.Mu.Unlock()
 
-			var err error
-			switch method {
-			case "next_state":
-				fromState := common.OptStringParam(params, "from_state")
-				err = game.NextState(fromState)
-			case "button_click":
-				pid, e := common.IntParam(params, "player_id")
-				if e != nil {
-					return nil, nil, e
-				}
-				err = game.ButtonClick(pid)
-			case "set_answerer":
-				pid, e := common.IntParam(params, "player_id")
-				if e != nil {
-					return nil, nil, e
-				}
-				err = game.SetAnswerer(pid)
-			case "answer":
-				isCorrect, e := common.BoolParam(params, "is_correct")
-				if e != nil {
-					return nil, nil, e
-				}
-				answerID := common.OptIntParam(params, "answer_id")
-				err = game.AnswerQuestion(isCorrect, answerID)
-			default:
-				return nil, nil, &common.BadFormatError{Msg: "Unknown method"}
-			}
-
-			if err != nil {
+			if err := game.ProcessCommand(method, params); err != nil {
 				return nil, nil, err
 			}
+
 			intercoms := game.DrainIntercoms()
 			return game.Serialize(), intercoms, nil
 		},

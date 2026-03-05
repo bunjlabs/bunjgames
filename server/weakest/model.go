@@ -1,6 +1,7 @@
 package weakest
 
 import (
+	"encoding/xml"
 	"math"
 	"sort"
 	"sync"
@@ -22,42 +23,42 @@ const (
 )
 
 type Question struct {
-	ID           int `json:"-"`
-	QuestionText string
-	AnswerText   string
-	IsFinal      bool
-	IsProcessed  bool
-	IsCorrect    *bool
+	ID           int    `json:"id"`
+	QuestionText string `json:"question_text"`
+	AnswerText   string `json:"answer_text"`
+	IsFinal      bool   `json:"is_final"`
+	IsProcessed  bool   `json:"is_processed"`
+	IsCorrect    *bool  `json:"is_correct"`
 }
 
 type Player struct {
-	ID           int
-	Name         string
-	IsWeak       bool
-	WeakID       *int
-	RightAnswers int
-	BankIncome   int
+	ID           int    `json:"id"`
+	Name         string `json:"name"`
+	IsWeak       bool   `json:"is_weak"`
+	WeakID       *int   `json:"weak_id"`
+	RightAnswers int    `json:"right_answers"`
+	BankIncome   int    `json:"bank_income"`
 }
 
 type Game struct {
-	Mu sync.Mutex
+	Mu sync.Mutex `json:"-"`
 
-	Token           string
-	Expired         time.Time
-	ScoreMultiplier int
-	Score           int
-	Bank            int
-	TmpScore        int
-	Round           int
-	State           string
-	Questions       []*Question
-	Players         []*Player
-	Question        *Question
-	Answerer        *Player
-	Weakest         *Player
-	Strongest       *Player
-	Timer           int64
-	BankTimer       int64
+	Token           string      `json:"token"`
+	Expired         time.Time   `json:"expired"`
+	ScoreMultiplier int         `json:"-"`
+	Score           int         `json:"score"`
+	Bank            int         `json:"bank"`
+	TmpScore        int         `json:"tmp_score"`
+	Round           int         `json:"round"`
+	State           string      `json:"state"`
+	Questions       []*Question `json:"-"`
+	Players         []*Player   `json:"players"`
+	Question        *Question   `json:"question"`
+	Answerer        *Player     `json:"-"`
+	Weakest         *Player     `json:"-"`
+	Strongest       *Player     `json:"-"`
+	Timer           int64       `json:"timer"`
+	BankTimer       int64       `json:"bank_timer"`
 }
 
 func NewGame() *Game {
@@ -468,11 +469,42 @@ func (g *Game) AddPlayer(name string) *Player {
 	return p
 }
 
+func (g *Game) ProcessCommand(method string, params map[string]any) error {
+	switch method {
+	case "next_state":
+		fromState := common.OptStringParam(params, "from_state")
+		return g.NextState(fromState)
+	case "save_bank":
+		return g.SaveBank(false)
+	case "answer_correct":
+		isCorrect, e := common.BoolParam(params, "is_correct")
+		if e != nil {
+			return e
+		}
+		return g.AnswerCorrect(isCorrect)
+	case "select_weakest":
+		pid, e1 := common.IntParam(params, "player_id")
+		wid, e2 := common.IntParam(params, "weakest_id")
+		if e1 != nil || e2 != nil {
+			return &common.BadFormatError{Msg: "Invalid params"}
+		}
+		return g.SelectWeakest(pid, wid)
+	case "select_final_answerer":
+		pid, e := common.IntParam(params, "player_id")
+		if e != nil {
+			return e
+		}
+		return g.SelectFinalAnswerer(pid)
+	default:
+		return &common.BadFormatError{Msg: "Unknown method"}
+	}
+}
+
 // --- Parse ---
 
-func (g *Game) Parse(filename string) error {
-	root, err := common.ParseXMLFile(filename)
-	if err != nil {
+func (g *Game) Parse(data []byte) error {
+	var root common.XMLElement
+	if err := xml.Unmarshal(data, &root); err != nil {
 		return &common.BadFormatError{Msg: "Cannot parse XML"}
 	}
 
@@ -530,53 +562,32 @@ func (g *Game) Parse(filename string) error {
 
 // --- Serialization ---
 
-type QuestionInfoState struct {
+type QuestionInfo struct {
 	IsCorrect   *bool `json:"is_correct"`
 	IsProcessed bool  `json:"is_processed"`
 }
 
-type QuestionState struct {
-	QuestionText string `json:"question"`
-	AnswerText   string `json:"answer"`
-}
-
-type PlayerState struct {
-	ID           int    `json:"id"`
-	Name         string `json:"name"`
-	IsWeak       bool   `json:"is_weak"`
-	Weak         *int   `json:"weak"`
-	RightAnswers int    `json:"right_answers"`
-	BankIncome   int    `json:"bank_income"`
-}
-
 type GameState struct {
-	Token           string              `json:"token"`
-	Expired         time.Time           `json:"expired"`
-	ScoreMultiplier int                 `json:"score_multiplier"`
-	Score           int                 `json:"score"`
-	Bank            int                 `json:"bank"`
-	TmpScore        int                 `json:"tmp_score"`
-	State           string              `json:"state"`
-	Round           int                 `json:"round"`
-	Question        *QuestionState      `json:"question"`
-	Answerer        *int                `json:"answerer"`
-	Weakest         *int                `json:"weakest"`
-	Strongest       *int                `json:"strongest"`
-	FinalQuestions  []QuestionInfoState `json:"final_questions"`
-	Timer           int64               `json:"timer"`
-	Players         []PlayerState       `json:"players"`
-	Name            string              `json:"name"`
+	Token           string          `json:"token"`
+	Expired         time.Time       `json:"expired"`
+	ScoreMultiplier int             `json:"score_multiplier"`
+	Score           int             `json:"score"`
+	Bank            int             `json:"bank"`
+	TmpScore        int             `json:"tmp_score"`
+	State           string          `json:"state"`
+	Round           int             `json:"round"`
+	Question        *Question       `json:"question"`
+	Answerer        *int            `json:"answerer"`
+	Weakest         *int            `json:"weakest"`
+	Strongest       *int            `json:"strongest"`
+	FinalQuestions  []*QuestionInfo `json:"final_questions"`
+	Timer           int64           `json:"timer"`
+	BankTimer       int64           `json:"bank_timer"`
+	Players         []*Player       `json:"players"`
+	Name            string          `json:"name"`
 }
 
 func (g *Game) Serialize() GameState {
-	var question *QuestionState
-	if g.Question != nil {
-		question = &QuestionState{
-			QuestionText: g.Question.QuestionText,
-			AnswerText:   g.Question.AnswerText,
-		}
-	}
-
 	var answererID, weakestID, strongestID *int
 	if g.Answerer != nil {
 		answererID = &g.Answerer.ID
@@ -588,28 +599,16 @@ func (g *Game) Serialize() GameState {
 		strongestID = &g.Strongest.ID
 	}
 
-	var finalQuestions []QuestionInfoState
+	var finalQuestions []*QuestionInfo
 	if g.State == StateFinalQuestions {
 		for _, q := range g.Questions {
 			if q.IsFinal {
-				finalQuestions = append(finalQuestions, QuestionInfoState{
+				finalQuestions = append(finalQuestions, &QuestionInfo{
 					IsCorrect:   q.IsCorrect,
 					IsProcessed: q.IsProcessed,
 				})
 			}
 		}
-	}
-
-	playerStates := make([]PlayerState, 0, len(g.Players))
-	for _, p := range g.Players {
-		playerStates = append(playerStates, PlayerState{
-			ID:           p.ID,
-			Name:         p.Name,
-			IsWeak:       p.IsWeak,
-			Weak:         p.WeakID,
-			RightAnswers: p.RightAnswers,
-			BankIncome:   p.BankIncome,
-		})
 	}
 
 	return GameState{
@@ -621,13 +620,14 @@ func (g *Game) Serialize() GameState {
 		TmpScore:        g.TmpScore,
 		State:           g.State,
 		Round:           g.Round,
-		Question:        question,
+		Question:        g.Question,
 		Answerer:        answererID,
 		Weakest:         weakestID,
 		Strongest:       strongestID,
 		FinalQuestions:  finalQuestions,
 		Timer:           g.Timer,
-		Players:         playerStates,
+		BankTimer:       g.BankTimer,
+		Players:         g.Players,
 		Name:            "weakest",
 	}
 }

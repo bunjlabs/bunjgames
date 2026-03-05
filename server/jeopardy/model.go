@@ -1,6 +1,7 @@
 package jeopardy
 
 import (
+	"encoding/xml"
 	"strings"
 	"sync"
 	"time"
@@ -68,21 +69,21 @@ type Player struct {
 }
 
 type Game struct {
-	Mu sync.Mutex
+	Mu sync.Mutex `json:"-"`
 
 	common.IntercomQueue
 
-	Token       string
-	Expired     time.Time
-	LastRound   int
-	FinalRound  int
-	State       string
-	Round       int
-	Question    *Question
-	Answerer    *Player
-	QuestionBet int
-	Themes      []*Theme
-	Players     []*Player
+	Token       string    `json:"token"`
+	Expired     time.Time `json:"expired"`
+	LastRound   int       `json:"-"`
+	FinalRound  int       `json:"-"`
+	State       string    `json:"state"`
+	Round       int       `json:"round"`
+	Question    *Question `json:"question"`
+	Answerer    *Player   `json:"-"`
+	QuestionBet int       `json:"-"`
+	Themes      []*Theme  `json:"-"`
+	Players     []*Player `json:"players"`
 }
 
 func NewGame() *Game {
@@ -513,9 +514,86 @@ func strPtr(s string) *string {
 	return &s
 }
 
-func (g *Game) Parse(filename string) error {
-	root, err := common.ParseXMLFile(filename)
-	if err != nil {
+func (g *Game) ProcessCommand(method string, params map[string]any) error {
+	switch method {
+	case "next_state":
+		fromState := common.OptStringParam(params, "from_state")
+		return g.NextState(fromState)
+	case "choose_question":
+		qid, e := common.IntParam(params, "question_id")
+		if e != nil {
+			return e
+		}
+		return g.ChooseQuestion(qid)
+	case "set_answerer_and_bet":
+		pid, e1 := common.IntParam(params, "player_id")
+		bet, e2 := common.IntParam(params, "bet")
+		if e1 != nil || e2 != nil {
+			return &common.BadFormatError{Msg: "Invalid params"}
+		}
+		return g.SetAnswererAndBet(pid, bet)
+	case "skip_question":
+		return g.SkipQuestion()
+	case "button_click":
+		pid, e := common.IntParam(params, "player_id")
+		if e != nil {
+			return e
+		}
+		return g.ButtonClick(pid)
+	case "answer":
+		isRight, e := common.BoolParam(params, "is_right")
+		if e != nil {
+			return e
+		}
+		return g.AnswerQuestion(isRight)
+	case "remove_final_theme":
+		tid, e := common.IntParam(params, "theme_id")
+		if e != nil {
+			return e
+		}
+		return g.RemoveFinalTheme(tid)
+	case "final_bet":
+		pid, e1 := common.IntParam(params, "player_id")
+		bet, e2 := common.IntParam(params, "bet")
+		if e1 != nil || e2 != nil {
+			return &common.BadFormatError{Msg: "Invalid params"}
+		}
+		return g.FinalBet(pid, bet)
+	case "final_answer":
+		pid, e1 := common.IntParam(params, "player_id")
+		answer, e2 := common.StringParam(params, "answer")
+		if e1 != nil || e2 != nil {
+			return &common.BadFormatError{Msg: "Invalid params"}
+		}
+		return g.FinalAnswerPlayer(pid, answer)
+	case "final_player_answer":
+		isRight, e := common.BoolParam(params, "is_right")
+		if e != nil {
+			return e
+		}
+		return g.FinalPlayerAnswer(isRight)
+	case "set_balance":
+		bl, e := common.IntSliceParam(params, "balance_list")
+		if e != nil {
+			return e
+		}
+		g.SetBalance(bl)
+		return nil
+	case "set_round":
+		round, e := common.IntParam(params, "round")
+		if e != nil {
+			return e
+		}
+		g.SetRound(round)
+		return nil
+	default:
+		return &common.BadFormatError{Msg: "Unknown method"}
+	}
+}
+
+func (g *Game) Parse(data []byte) error {
+	var root common.XMLElement
+	if err := xml.Unmarshal(data, &root); err != nil {
 		return &common.BadFormatError{Msg: "Cannot parse XML"}
 	}
 
@@ -765,105 +843,21 @@ func (g *Game) themesForRound(round int) []*Theme {
 
 // --- Serialization ---
 
-type QuestionState struct {
-	ID          int     `json:"id"`
-	CustomTheme *string `json:"custom_theme"`
-	Text        *string `json:"text"`
-	Image       *string `json:"image"`
-	Audio       *string `json:"audio"`
-	Video       *string `json:"video"`
-	AnswerText  *string `json:"answer_text"`
-	AnswerImage *string `json:"answer_image"`
-	AnswerAudio *string `json:"answer_audio"`
-	AnswerVideo *string `json:"answer_video"`
-	Value       int     `json:"value"`
-	Answer      string  `json:"answer"`
-	Comment     string  `json:"comment"`
-	Type        string  `json:"type"`
-	IsProcessed bool    `json:"is_processed"`
-}
-
-type ThemeState struct {
-	ID        int             `json:"id"`
-	Name      string          `json:"name"`
-	Comment   *string         `json:"comment"`
-	IsRemoved bool            `json:"is_removed"`
-	Questions []QuestionState `json:"questions"`
-}
-
-type PlayerState struct {
-	ID          int    `json:"id"`
-	Name        string `json:"name"`
-	Balance     int    `json:"balance"`
-	FinalBet    int    `json:"final_bet"`
-	FinalAnswer string `json:"final_answer"`
-}
-
 type GameState struct {
-	Token        string         `json:"token"`
-	Expired      time.Time      `json:"expired"`
-	Round        int            `json:"round"`
-	RoundsCount  int            `json:"rounds_count"`
-	IsFinalRound bool           `json:"is_final_round"`
-	State        string         `json:"state"`
-	Question     *QuestionState `json:"question"`
-	Themes       []ThemeState   `json:"themes"`
-	Players      []PlayerState  `json:"players"`
-	Answerer     *int           `json:"answerer"`
-	Name         string         `json:"name"`
-}
-
-func serializeQuestion(q *Question) *QuestionState {
-	if q == nil {
-		return nil
-	}
-	return &QuestionState{
-		ID:          q.ID,
-		CustomTheme: q.CustomTheme,
-		Text:        q.Text,
-		Image:       q.Image,
-		Audio:       q.Audio,
-		Video:       q.Video,
-		AnswerText:  q.AnswerText,
-		AnswerImage: q.AnswerImage,
-		AnswerAudio: q.AnswerAudio,
-		AnswerVideo: q.AnswerVideo,
-		Value:       q.Value,
-		Answer:      q.Answer,
-		Comment:     q.Comment,
-		Type:        q.Type,
-		IsProcessed: q.IsProcessed,
-	}
+	Token        string    `json:"token"`
+	Expired      time.Time `json:"expired"`
+	Round        int       `json:"round"`
+	RoundsCount  int       `json:"rounds_count"`
+	IsFinalRound bool      `json:"is_final_round"`
+	State        string    `json:"state"`
+	Question     *Question `json:"question"`
+	Themes       []*Theme  `json:"themes"`
+	Players      []*Player `json:"players"`
+	Answerer     *int      `json:"answerer"`
+	Name         string    `json:"name"`
 }
 
 func (g *Game) Serialize() GameState {
-	themes := g.GetThemes()
-	themeStates := make([]ThemeState, 0, len(themes))
-	for _, t := range themes {
-		qs := make([]QuestionState, 0, len(t.Questions))
-		for _, q := range t.Questions {
-			qs = append(qs, *serializeQuestion(q))
-		}
-		themeStates = append(themeStates, ThemeState{
-			ID:        t.ID,
-			Name:      t.Name,
-			Comment:   t.Comment,
-			IsRemoved: t.IsRemoved,
-			Questions: qs,
-		})
-	}
-
-	playerStates := make([]PlayerState, 0, len(g.Players))
-	for _, p := range g.Players {
-		playerStates = append(playerStates, PlayerState{
-			ID:          p.ID,
-			Name:        p.Name,
-			Balance:     p.Balance,
-			FinalBet:    p.FinalBet,
-			FinalAnswer: p.FinalAnswer,
-		})
-	}
-
 	var answererID *int
 	if g.Answerer != nil {
 		answererID = &g.Answerer.ID
@@ -876,9 +870,9 @@ func (g *Game) Serialize() GameState {
 		RoundsCount:  g.LastRound,
 		IsFinalRound: g.isFinalRound(),
 		State:        g.State,
-		Question:     serializeQuestion(g.Question),
-		Themes:       themeStates,
-		Players:      playerStates,
+		Question:     g.Question,
+		Themes:       g.GetThemes(),
+		Players:      g.Players,
 		Answerer:     answererID,
 		Name:         "jeopardy",
 	}
