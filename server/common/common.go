@@ -315,21 +315,19 @@ func CreateGameHandler[T any](
 				return
 			}
 
-			var contentFile string
-			if config.MediaSubdir == "whirligig" {
-				contentFile = filepath.Join(gamePath, "content.yaml")
-			} else {
-				contentFile = filepath.Join(gamePath, "content.xml")
-			}
+			yamlFile := filepath.Join(gamePath, "content.yaml")
+			xmlFile := filepath.Join(gamePath, "content.xml")
 
-			contentData, err := os.ReadFile(contentFile)
+			contentData, err := os.ReadFile(yamlFile)
 			if err != nil {
-				os.RemoveAll(gamePath)
-				ErrorResponse(w, http.StatusBadRequest, "Cannot read content file")
-				return
+				contentData, err = os.ReadFile(xmlFile)
+				if err != nil {
+					os.RemoveAll(gamePath)
+					ErrorResponse(w, http.StatusBadRequest, "Cannot read content file (tried yaml and xml)")
+					return
+				}
 			}
 			parseData = contentData
-			defer os.Remove(contentFile)
 		} else {
 			// Read XML file directly
 			contentData, err := os.ReadFile(tmpFile)

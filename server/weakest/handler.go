@@ -9,6 +9,11 @@ import (
 )
 
 var GameStore = common.NewStore[Game]()
+var gameHub *common.Hub
+
+func SetHub(hub *common.Hub) {
+	gameHub = hub
+}
 
 var CreateHandler = common.CreateGameHandler(
 	GameStore,
@@ -25,7 +30,7 @@ var CreateHandler = common.CreateGameHandler(
 	},
 	common.CreateGameConfig{
 		TempDirPrefix: "weakest-*",
-		FileExtension: ".xml",
+		FileExtension: ".yaml",
 		MediaSubdir:   "",
 		NeedsUnzip:    false,
 	},
@@ -68,6 +73,14 @@ func RegisterPlayerHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	player := game.AddPlayer(name)
+
+	// Broadcast update to all connected clients
+	if gameHub != nil {
+		roomName := "weakest_" + token
+		stateJSON, _ := json.Marshal(map[string]any{"type": "game", "message": game.Serialize()})
+		gameHub.Broadcast(roomName, stateJSON)
+	}
+
 	common.JSONResponse(w, map[string]any{
 		"player_id": player.ID,
 		"game":      game.Serialize(),
@@ -75,6 +88,7 @@ func RegisterPlayerHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func NewConsumer(hub *common.Hub) *common.ConsumerHandler {
+	SetHub(hub)
 	return &common.ConsumerHandler{
 		Hub:      hub,
 		GameName: "weakest",

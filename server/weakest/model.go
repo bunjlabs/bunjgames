@@ -1,13 +1,14 @@
 package weakest
 
 import (
-	"encoding/xml"
 	"math"
 	"sort"
 	"sync"
 	"time"
 
 	"bunjgames-server/common"
+
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -23,12 +24,11 @@ const (
 )
 
 type Question struct {
-	ID           int    `json:"id"`
-	QuestionText string `json:"question_text"`
-	AnswerText   string `json:"answer_text"`
-	IsFinal      bool   `json:"is_final"`
-	IsProcessed  bool   `json:"is_processed"`
-	IsCorrect    *bool  `json:"is_correct"`
+	ID          int    `json:"id" yaml:"-"`
+	Question    string `json:"question" yaml:"question"`
+	Answer      string `json:"answer" yaml:"answer"`
+	IsProcessed bool   `json:"is_processed" yaml:"-"`
+	IsCorrect   *bool  `json:"is_correct" yaml:"-"`
 }
 
 type Player struct {
@@ -41,24 +41,32 @@ type Player struct {
 }
 
 type Game struct {
-	Mu sync.Mutex `json:"-"`
+	Mu sync.Mutex `json:"-" yaml:"-"`
 
-	Token           string      `json:"token"`
-	Expired         time.Time   `json:"expired"`
-	ScoreMultiplier int         `json:"-"`
-	Score           int         `json:"score"`
-	Bank            int         `json:"bank"`
-	TmpScore        int         `json:"tmp_score"`
-	Round           int         `json:"round"`
-	State           string      `json:"state"`
-	Questions       []*Question `json:"-"`
-	Players         []*Player   `json:"players"`
-	Question        *Question   `json:"question"`
-	Answerer        *Player     `json:"-"`
-	Weakest         *Player     `json:"-"`
-	Strongest       *Player     `json:"-"`
-	Timer           int64       `json:"timer"`
-	BankTimer       int64       `json:"bank_timer"`
+	Token           string      `json:"token" yaml:"-"`
+	Expired         time.Time   `json:"expired" yaml:"-"`
+	ScoreMultiplier int         `json:"score_multiplier" yaml:"score_multiplier"`
+	Score           int         `json:"score" yaml:"-"`
+	Bank            int         `json:"bank" yaml:"-"`
+	TmpScore        int         `json:"tmp_score" yaml:"-"`
+	Round           int         `json:"round" yaml:"-"`
+	State           string      `json:"state" yaml:"-"`
+	Questions       []*Question `json:"-" yaml:"questions"`
+	FinalQuestions  []*Question `json:"-" yaml:"final_questions"`
+	Players         []*Player   `json:"players" yaml:"-"`
+	Question        *Question   `json:"question" yaml:"-"`
+	Answerer        *Player     `json:"-" yaml:"-"`
+	Weakest         *Player     `json:"-" yaml:"-"`
+	Strongest       *Player     `json:"-" yaml:"-"`
+	Timer           int64       `json:"timer" yaml:"-"`
+	BankTimer       int64       `json:"bank_timer" yaml:"-"`
+	Name            string      `json:"name" yaml:"-"`
+
+	// JSON-only serialization fields
+	AnswererID         *int        `json:"answerer" yaml:"-"`
+	WeakestID          *int        `json:"weakest" yaml:"-"`
+	StrongestID        *int        `json:"strongest" yaml:"-"`
+	FinalQuestionsInfo []*Question `json:"final_questions" yaml:"-"`
 }
 
 func NewGame() *Game {
@@ -67,6 +75,8 @@ func NewGame() *Game {
 		Expired:         time.Now().Add(12 * time.Hour),
 		Round:           1,
 		ScoreMultiplier: 1,
+		Players:         []*Player{},
+		Name:            "weakest",
 	}
 }
 
@@ -83,9 +93,17 @@ func (g *Game) getActivePlayers() []*Player {
 func (g *Game) getQuestions() []*Question {
 	isFinal := g.State == StateFinalQuestions
 	var result []*Question
-	for _, q := range g.Questions {
-		if q.IsFinal == isFinal && !q.IsProcessed {
-			result = append(result, q)
+	if isFinal {
+		for _, q := range g.FinalQuestions {
+			if !q.IsProcessed {
+				result = append(result, q)
+			}
+		}
+	} else {
+		for _, q := range g.Questions {
+			if !q.IsProcessed {
+				result = append(result, q)
+			}
 		}
 	}
 	return result
@@ -356,8 +374,8 @@ func (g *Game) AnswerCorrect(isCorrect bool) error {
 			playerB := players[1]
 
 			processedCount := 0
-			for _, q := range g.Questions {
-				if q.IsFinal && q.IsProcessed {
+			for _, q := range g.FinalQuestions {
+				if q.IsProcessed {
 					processedCount++
 				}
 			}
@@ -373,8 +391,8 @@ func (g *Game) AnswerCorrect(isCorrect bool) error {
 				return nil
 			} else if processedCount >= 10 && processedCount%2 == 1 {
 				var lastProcessed *Question
-				for _, q := range g.Questions {
-					if q.IsFinal && q.IsProcessed {
+				for _, q := range g.FinalQuestions {
+					if q.IsProcessed {
 						lastProcessed = q
 					}
 				}
@@ -503,58 +521,31 @@ func (g *Game) ProcessCommand(method string, params map[string]any) error {
 // --- Parse ---
 
 func (g *Game) Parse(data []byte) error {
-	var root common.XMLElement
-	if err := xml.Unmarshal(data, &root); err != nil {
-		return &common.BadFormatError{Msg: "Cannot parse XML"}
+	if err := yaml.Unmarshal(data, g); err != nil {
+		return &common.BadFormatError{Msg: "Cannot parse YAML"}
 	}
 
-	questionsXML := root.Find("questions")
-	if questionsXML == nil {
+	if len(g.Questions) == 0 {
 		return &common.BadFormatError{Msg: "No questions found"}
 	}
 
-	for _, qXML := range questionsXML.FindAll("question") {
-		g.Questions = append(g.Questions, &Question{
-			ID:           common.NextID(),
-			QuestionText: qXML.FindText("question"),
-			AnswerText:   qXML.FindText("answer"),
-			IsFinal:      false,
-		})
-	}
-
-	finalQuestionsXML := root.Find("final_questions")
-	if finalQuestionsXML == nil {
-		return &common.BadFormatError{Msg: "No final questions found"}
-	}
-
-	finalQs := finalQuestionsXML.FindAll("question")
-	if len(finalQs) < 10 {
+	if len(g.FinalQuestions) < 10 {
 		return &common.BadFormatError{Msg: "Number of final questions must be 10 or more"}
 	}
-	if len(finalQs)%2 != 0 {
+	if len(g.FinalQuestions)%2 != 0 {
 		return &common.BadFormatError{Msg: "Number of final questions must be even"}
 	}
 
-	for _, qXML := range finalQs {
-		g.Questions = append(g.Questions, &Question{
-			ID:           common.NextID(),
-			QuestionText: qXML.FindText("question"),
-			AnswerText:   qXML.FindText("answer"),
-			IsFinal:      true,
-		})
+	for _, q := range g.Questions {
+		q.ID = common.NextID()
 	}
 
-	scoreMultiplierXML := root.Find("score_multiplier")
-	if scoreMultiplierXML != nil {
-		val := 0
-		for _, c := range scoreMultiplierXML.Text() {
-			if c >= '0' && c <= '9' {
-				val = val*10 + int(c-'0')
-			}
-		}
-		if val > 0 {
-			g.ScoreMultiplier = val
-		}
+	for _, q := range g.FinalQuestions {
+		q.ID = common.NextID()
+	}
+
+	if g.ScoreMultiplier <= 0 {
+		g.ScoreMultiplier = 1
 	}
 
 	return nil
@@ -562,72 +553,28 @@ func (g *Game) Parse(data []byte) error {
 
 // --- Serialization ---
 
-type QuestionInfo struct {
-	IsCorrect   *bool `json:"is_correct"`
-	IsProcessed bool  `json:"is_processed"`
-}
-
-type GameState struct {
-	Token           string          `json:"token"`
-	Expired         time.Time       `json:"expired"`
-	ScoreMultiplier int             `json:"score_multiplier"`
-	Score           int             `json:"score"`
-	Bank            int             `json:"bank"`
-	TmpScore        int             `json:"tmp_score"`
-	State           string          `json:"state"`
-	Round           int             `json:"round"`
-	Question        *Question       `json:"question"`
-	Answerer        *int            `json:"answerer"`
-	Weakest         *int            `json:"weakest"`
-	Strongest       *int            `json:"strongest"`
-	FinalQuestions  []*QuestionInfo `json:"final_questions"`
-	Timer           int64           `json:"timer"`
-	BankTimer       int64           `json:"bank_timer"`
-	Players         []*Player       `json:"players"`
-	Name            string          `json:"name"`
-}
-
-func (g *Game) Serialize() GameState {
-	var answererID, weakestID, strongestID *int
+func (g *Game) Serialize() *Game {
 	if g.Answerer != nil {
-		answererID = &g.Answerer.ID
+		g.AnswererID = &g.Answerer.ID
+	} else {
+		g.AnswererID = nil
 	}
 	if g.Weakest != nil {
-		weakestID = &g.Weakest.ID
+		g.WeakestID = &g.Weakest.ID
+	} else {
+		g.WeakestID = nil
 	}
 	if g.Strongest != nil {
-		strongestID = &g.Strongest.ID
+		g.StrongestID = &g.Strongest.ID
+	} else {
+		g.StrongestID = nil
 	}
 
-	var finalQuestions []*QuestionInfo
 	if g.State == StateFinalQuestions {
-		for _, q := range g.Questions {
-			if q.IsFinal {
-				finalQuestions = append(finalQuestions, &QuestionInfo{
-					IsCorrect:   q.IsCorrect,
-					IsProcessed: q.IsProcessed,
-				})
-			}
-		}
+		g.FinalQuestionsInfo = g.FinalQuestions
+	} else {
+		g.FinalQuestionsInfo = nil
 	}
 
-	return GameState{
-		Token:           g.Token,
-		Expired:         g.Expired,
-		ScoreMultiplier: g.ScoreMultiplier,
-		Score:           g.Score,
-		Bank:            g.Bank,
-		TmpScore:        g.TmpScore,
-		State:           g.State,
-		Round:           g.Round,
-		Question:        g.Question,
-		Answerer:        answererID,
-		Weakest:         weakestID,
-		Strongest:       strongestID,
-		FinalQuestions:  finalQuestions,
-		Timer:           g.Timer,
-		BankTimer:       g.BankTimer,
-		Players:         g.Players,
-		Name:            "weakest",
-	}
+	return g
 }
