@@ -1,55 +1,42 @@
 package main
 
 import (
-	"log"
-	"net/http"
-	"os"
-	"strings"
-
 	"bunjgames-server/common"
 	"bunjgames-server/feud"
 	"bunjgames-server/jeopardy"
 	"bunjgames-server/weakest"
 	"bunjgames-server/whirligig"
+	"log"
+	"net/http"
+	"os"
 )
 
-func corsMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		if r.Method == http.MethodOptions {
-			w.WriteHeader(http.StatusOK)
-			return
+func cleanMediaFolder() {
+	log.Println("Cleaning media directory contents...")
+	if err := os.MkdirAll("media", 0755); err != nil {
+		log.Fatalf("Failed to create media directory: %v", err)
+	}
+	if entries, err := os.ReadDir("media"); err == nil {
+		for _, entry := range entries {
+			if entry.Name() == ".gitignore" {
+				continue
+			}
+			path := "media/" + entry.Name()
+			if err := os.RemoveAll(path); err != nil {
+				log.Printf("Warning: Failed to remove %s: %v", path, err)
+			}
 		}
-		next.ServeHTTP(w, r)
-	})
-}
-
-func availableGamesHandler(w http.ResponseWriter, r *http.Request) {
-	token := strings.ToUpper(strings.TrimSpace(r.PathValue("token")))
-	var result []map[string]string
-	if feud.GameStore.Exists(token) {
-		result = append(result, map[string]string{"type": "feud"})
+		log.Println("Media directory cleaned successfully")
+	} else {
+		log.Printf("Warning: Failed to read media directory: %v", err)
 	}
-	if jeopardy.GameStore.Exists(token) {
-		result = append(result, map[string]string{"type": "jeopardy"})
-	}
-	if weakest.GameStore.Exists(token) {
-		result = append(result, map[string]string{"type": "weakest"})
-	}
-	if result == nil {
-		result = []map[string]string{}
-	}
-	common.JSONResponse(w, result)
 }
 
 func main() {
+	cleanMediaFolder()
+
 	hub := common.NewHub()
-
 	mux := http.NewServeMux()
-
-	mux.HandleFunc("GET /api/common/games/{token}/available", availableGamesHandler)
 
 	mux.HandleFunc("POST /api/whirligig/create", whirligig.CreateHandler)
 	mux.HandleFunc("POST /api/jeopardy/create", jeopardy.CreateHandler)
@@ -69,16 +56,13 @@ func main() {
 	mux.Handle("/ws/weakest/{token}", weakestConsumer)
 	mux.Handle("/ws/feud/{token}", feudConsumer)
 
-	os.MkdirAll("media", 0755)
-	mux.Handle("/media/", http.StripPrefix("/media/", http.FileServer(http.Dir("media"))))
-
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8000"
 	}
 
 	log.Printf("Server starting on :%s", port)
-	if err := http.ListenAndServe(":"+port, corsMiddleware(mux)); err != nil {
+	if err := http.ListenAndServe(":"+port, mux); err != nil {
 		log.Fatal(err)
 	}
 }

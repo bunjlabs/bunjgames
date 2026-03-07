@@ -79,7 +79,7 @@ const WeakestContent = ({game}) => {
         <VerticalList className={styles.players}>
             {game.players.filter(player => !player.is_weak).map(player =>
                 <TwoLineListItem key={player.id} className={styles.player}>
-                    <div>{player.weak ? game.players.find(p => p.id === player.weak).name : "⸻"}</div>
+                    <div>{player.weak_id ? game.players.find(p => p.id === player.weak_id).name : "⸻"}</div>
                     <div>{player.name}</div>
                 </TwoLineListItem>
             )}

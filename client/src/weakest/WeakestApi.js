@@ -25,14 +25,9 @@ export default class WeakestApi extends GameApi {
     }
 
     registerPlayer(token, name) {
-        const formData = new FormData();
-        formData.append("token", token);
-        formData.append("name", name);
-
-        return this.axios.post('players/register', formData, {
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            }
+        return this.axios.post('players/register', {
+            token: token,
+            name: name
         }).then(result => {
             this.saveToken(result.data.game.token);
             this.savePlayerId(result.data.player_id);

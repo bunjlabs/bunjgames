@@ -9,7 +9,7 @@ import {WEAKEST_API} from "../index";
 
 const Music = {
     intro: HowlWrapper('/sounds/weakest/intro.mp3'),
-    background: HowlWrapper('/sounds/weakest/background.mp3'),
+    background: HowlWrapper('/sounds/weakest/background.mp3', true),
     questions: HowlWrapper('/sounds/weakest/questions.mp3'),
 }
 
@@ -77,14 +77,15 @@ const stateContent = (game) => {
 };
 
 const WeakestView = () => {
-    const [music, setMusic] = useState();
-    const game = useGame(WEAKEST_API, (game) => {
+    const musicRef = React.useRef();
+    
+    const onStateChange = React.useCallback((game) => {
         if (["intro"].includes(game.state)) {
-            setMusic(changeMusic(music, "intro"));
+            musicRef.current = changeMusic(musicRef.current, "intro");
         } else if (["questions", "final_questions"].includes(game.state)) {
-            setMusic(changeMusic(music, "questions"));
+            musicRef.current = changeMusic(musicRef.current, "questions");
         } else {
-            setMusic(changeMusic(music, "background"));
+            musicRef.current = changeMusic(musicRef.current, "background");
         }
 
         if (["questions", "final_questions"].includes(game.state)) {
@@ -94,18 +95,22 @@ const WeakestView = () => {
         } else if (["weakest_choose", "end"].includes(game.state)) {
             Sounds.question_end.play();
         }
-    }, (message) => {
+    }, []);
+    
+    const onIntercom = React.useCallback((message) => {
         switch (message) {
             case "gong":
                 Sounds.gong.play();
                 break;
             case "sound_stop":
-                setMusic(changeMusic(music, ""));
+                musicRef.current = changeMusic(musicRef.current, "");
                 break;
             default:
                 break;
         }
-    });
+    }, []);
+    
+    const game = useGame(WEAKEST_API, onStateChange, onIntercom);
 
     useEffect(() => {
         loadSounds();

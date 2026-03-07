@@ -3,7 +3,6 @@ package whirligig
 import (
 	"log"
 	"math/rand"
-	"os"
 	"slices"
 	"sync"
 	"time"
@@ -185,6 +184,38 @@ func (g *Game) hasUnprocessedItems() bool {
 	return false
 }
 
+func (g *Game) ProcessCommand(method string, params map[string]any) error {
+	switch method {
+	case "next_state":
+		fromState := common.OptStringParam(params, "from_state")
+		return g.NextState((*State)(fromState))
+	case "change_score":
+		cs, e1 := common.IntParam(params, "connoisseurs_score")
+		vs, e2 := common.IntParam(params, "viewers_score")
+		if e1 != nil || e2 != nil {
+			return &common.BadFormatError{Msg: "Invalid params"}
+		}
+		g.ChangeScore(cs, vs)
+		return nil
+	case "change_timer":
+		paused, e := common.BoolParam(params, "paused")
+		if e != nil {
+			return &common.BadFormatError{Msg: "Invalid params"}
+		}
+		return g.ChangeTimer(paused)
+	case "answer_correct":
+		isCorrect, e := common.BoolParam(params, "is_correct")
+		if e != nil {
+			return &common.BadFormatError{Msg: "Invalid params"}
+		}
+		return g.AnswerCorrect(isCorrect)
+	case "extra_time":
+		return g.ExtraTime()
+	default:
+		return &common.BadFormatError{Msg: "Unknown method"}
+	}
+}
+
 func (g *Game) randomiseNextItem() (randomIdx, actualIdx int, err error) {
 	n := len(g.Items)
 	unprocessed := 0
@@ -254,13 +285,7 @@ func (g *Game) NextState(fromState *State) error {
 	return nil
 }
 
-func (g *Game) Parse(filename string) error {
-	data, err := os.ReadFile(filename)
-	if err != nil {
-		return &common.BadFormatError{Msg: "Cannot read file"}
-	}
-	log.Printf("Parsing game file %s", filename)
-
+func (g *Game) Parse(data []byte) error {
 	var items []GameItem
 	if err := yaml.Unmarshal(data, &items); err != nil {
 		return &common.BadFormatError{Msg: "Cannot parse YAML"}

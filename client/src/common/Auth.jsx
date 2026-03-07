@@ -85,7 +85,8 @@ const GameOpenForm = ({api, setConnected}) => {
 const RegisterPlayerForm = ({api, setConnected}) => {
     const [loading, setLoading] = useState(false);
     const query = useQuery();
-    const [token, setToken] = useState(query.get('token') || "");
+    const tokenFromQuery = query.get('token') || "";
+    const [token, setToken] = useState(tokenFromQuery);
     const [name, setName] = useState(api.getSavedUsername());
 
     const onSubmit = () => {
@@ -146,12 +147,13 @@ const AdminAuth = ({api, setConnected}) => {
 const PlayerAuth = ({api, setConnected}) => {
     const [loading, setLoading] = useState(true);
     const query = useQuery();
+    const tokenParam = query.get('token');
 
     useEffect(() => {
         const checkGame = (game) => {
             return !game.players || !api.playerId || game.players.find(p => p.id === api.playerId)
         }
-        if(api.hasToken() && api.hasPlayerId() && !query.get('token')) {
+        if(api.hasToken() && api.hasPlayerId() && !tokenParam) {
             api.connect(api.token, checkGame).then(() => {
                 setConnected(true);
             }).catch(() => {
@@ -160,7 +162,7 @@ const PlayerAuth = ({api, setConnected}) => {
         } else {
             setLoading(false);
         }
-    }, [api, query, setConnected]);
+    }, [api, tokenParam, setConnected]);
 
     if(loading) return <Loading/>
 
