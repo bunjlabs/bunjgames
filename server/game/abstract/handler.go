@@ -1,11 +1,15 @@
 package abstract
 
 import (
+	"bunjgames/hub"
 	"crypto/rand"
+	"errors"
+	"io"
 	"math/big"
+	"time"
 )
 
-func (game *BaseGame) GenerateToken() *BaseGame {
+func (game *BaseGame) generateToken() {
 	game.Mutex.Lock()
 	defer game.Mutex.Unlock()
 
@@ -17,13 +21,35 @@ func (game *BaseGame) GenerateToken() *BaseGame {
 		b[i] = charset[n.Int64()]
 	}
 	game.Token = string(b)
-	return game
+}
+
+func (game *BaseGame) Initialise() {
+	game.generateToken()
 }
 
 func (game *BaseGame) GetToken() string {
 	return game.Token
 }
 
-func (game *BaseGame) Serialize() any {
-	return game
+func (game *BaseGame) Tick(time.Duration) (*Command, error) {
+	return nil, nil
+}
+
+func (game *BaseGame) RegisterPlayer(string) error {
+	return errors.New("this game does not support players")
+}
+
+func (game *BaseGame) Parse(io.Reader) error {
+	return errors.New("this game does not support parsing")
+}
+
+func (game *BaseGame) ProcessCommand(string, map[string]any) (*Command, error) {
+	return nil, errors.New("this game does not support commands")
+}
+
+func (game *BaseGame) Intercom(message string) {
+	hub.GetHub().Broadcast(
+		game.Token,
+		&Command{Type: "intercom", Message: message},
+	)
 }

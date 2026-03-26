@@ -13,7 +13,7 @@ type Answer struct {
 }
 
 type Question struct {
-	IsProcessed bool `json:"isProcessed"`
+	IsProcessed bool `json:"isProcessed" yaml:"-"`
 
 	Description string `json:"description" yaml:"description"`
 	Text        string `json:"text" yaml:"text"`
@@ -47,9 +47,8 @@ type State struct {
 }
 
 type Timer struct {
-	Paused     bool  `json:"paused"`
-	PausedTime int64 `json:"pausedTime"`
-	Time       int64 `json:"time"`
+	Paused bool  `json:"paused"`
+	Time   int64 `json:"time"`
 }
 
 type Game struct {

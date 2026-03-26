@@ -3,17 +3,14 @@
     "version": "0.2.0",
     "private": true,
     "dependencies": {
-        "@emotion/react": "^11.11.4",
-        "@emotion/styled": "^11.11.5",
-        "@fontsource/roboto": "^5.0.13",
         "axios": "^1.13.2",
-        "classnames": "^2.5.1",
         "howler": "^2.2.0",
         "konva": "^10.0.8",
         "qrcode.react": "^4.2.0",
         "react": "^19.2.0",
         "react-dom": "^19.2.0",
-        "react-icons": "^5.5.0",
+        "react-icons": "^5.6.0",
+        "react-router-dom": "^6.24.1",
         "react-scripts": "^5.0.0",
         "react-toastify": "^11.0.5",
         "typescript": "^4.0.0"
@@ -23,11 +20,7 @@
         "@types/jest": "^30.0.0",
         "@types/node": "^24.9.1",
         "@types/react": "^19.2.0",
-        "@types/react-dom": "^19.2.0",
-        "react-router-dom": "^6.24.1",
-        "sass": "^1.93.3",
-        "sass-loader": "^16.0.6",
-        "style-loader": "^4.0.0"
+        "@types/react-dom": "^19.2.0"
     },
     "scripts": {
         "start": "react-scripts start",

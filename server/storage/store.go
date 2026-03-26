@@ -7,29 +7,29 @@ import (
 )
 
 type GameStore struct {
-	mutex sync.RWMutex
-	games map[string]abstract.Game
+	Mutex sync.RWMutex
+	Games map[string]abstract.Game
 }
 
 func NewGameStore() *GameStore {
-	return &GameStore{games: make(map[string]abstract.Game)}
+	return &GameStore{Games: make(map[string]abstract.Game)}
 }
 
 func (store *GameStore) Get(token string) abstract.Game {
-	store.mutex.RLock()
-	defer store.mutex.RUnlock()
-	game, _ := store.games[token]
+	store.Mutex.RLock()
+	defer store.Mutex.RUnlock()
+	game, _ := store.Games[token]
 	return game
 }
 
 func (store *GameStore) Add(game abstract.Game) error {
-	store.mutex.Lock()
-	defer store.mutex.Unlock()
+	store.Mutex.Lock()
+	defer store.Mutex.Unlock()
 
-	if _, tokenAlreadyExists := store.games[game.GetToken()]; tokenAlreadyExists {
+	if _, tokenAlreadyExists := store.Games[game.GetToken()]; tokenAlreadyExists {
 		return fmt.Errorf("game with token %s already exists", game.GetToken())
 	}
 
-	store.games[game.GetToken()] = game
+	store.Games[game.GetToken()] = game
 	return nil
 }

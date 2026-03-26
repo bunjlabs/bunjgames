@@ -2,15 +2,77 @@ package storage
 
 import (
 	"archive/tar"
+	"archive/zip"
 	"compress/gzip"
 	"fmt"
 	"io"
 	"log"
 	"mime/multipart"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
 )
+
+type ArchiveType int
+
+const (
+	ArchiveNone ArchiveType = iota
+	ArchiveTarGz
+	ArchiveZip
+)
+
+func Unzip(filePath string, dest string) error {
+	r, err := zip.OpenReader(filePath)
+	if err != nil {
+		return err
+	}
+	defer r.Close()
+
+	for _, f := range r.File {
+		name, err := url.PathUnescape(f.Name)
+		if err != nil {
+			name = f.Name
+		}
+		target := filepath.Join(dest, name)
+
+		if !strings.HasPrefix(filepath.Clean(target), filepath.Clean(dest)+string(os.PathSeparator)) {
+			return fmt.Errorf("invalid file path: %s", f.Name)
+		}
+
+		if f.FileInfo().IsDir() {
+			if err := os.MkdirAll(target, 0755); err != nil {
+				return err
+			}
+			continue
+		}
+
+		if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+			return err
+		}
+
+		rc, err := f.Open()
+		if err != nil {
+			return err
+		}
+
+		outFile, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, f.Mode())
+		if err != nil {
+			rc.Close()
+			return err
+		}
+
+		if _, err := io.Copy(outFile, rc); err != nil {
+			outFile.Close()
+			rc.Close()
+			return err
+		}
+		outFile.Close()
+		rc.Close()
+	}
+
+	return nil
+}
 
 func Ungzip(fileStream io.Reader, dest string) error {
 	gzReader, err := gzip.NewReader(fileStream)
@@ -66,36 +128,51 @@ func Ungzip(fileStream io.Reader, dest string) error {
 func UploadFile(
 	file *multipart.FileHeader,
 	destination string,
-	unzip bool,
+	archiveType ArchiveType,
 ) (io.ReadCloser, error) {
 	src, err := file.Open()
 	if err != nil {
 		return nil, err
 	}
 
-	var fileStream io.ReadCloser
+	if archiveType == ArchiveNone {
+		return src, nil
+	}
 
-	if unzip {
-		defer src.Close()
-		err := Ungzip(src, destination)
+	defer src.Close()
+
+	switch archiveType {
+	case ArchiveTarGz:
+		if err := Ungzip(src, destination); err != nil {
+			return nil, err
+		}
+	case ArchiveZip:
+		tmpFile, err := os.CreateTemp("", "upload-*.zip")
 		if err != nil {
 			return nil, err
 		}
+		defer os.Remove(tmpFile.Name())
+		defer tmpFile.Close()
 
-		yamlFile := filepath.Join(destination, "content.yaml")
-		xmlFile := filepath.Join(destination, "content.xml")
-
-		fileStream, err = os.Open(yamlFile)
-		if err != nil {
-			fileStream, err = os.Open(xmlFile)
-			if err != nil {
-				_ = os.RemoveAll(destination)
-				return nil, fmt.Errorf("cannot find content file (tried yaml and xml)")
-			}
+		if _, err := io.Copy(tmpFile, src); err != nil {
+			return nil, err
 		}
-		defer fileStream.Close()
-	} else {
-		fileStream = src
+
+		if err := Unzip(tmpFile.Name(), destination); err != nil {
+			return nil, err
+		}
+	}
+
+	yamlFile := filepath.Join(destination, "content.yaml")
+	xmlFile := filepath.Join(destination, "content.xml")
+
+	fileStream, err := os.Open(yamlFile)
+	if err != nil {
+		fileStream, err = os.Open(xmlFile)
+		if err != nil {
+			_ = os.RemoveAll(destination)
+			return nil, fmt.Errorf("cannot find content file (tried yaml and xml)")
+		}
 	}
 
 	return fileStream, nil

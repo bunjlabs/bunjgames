@@ -11,16 +11,19 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const epsilon = int64(500)
+
 func (item *Item) GetTime() int64 {
 	if item.Type == "standard" {
-		return 60
+		return 60*1000 + epsilon
 	}
-	return 20
+	return 20*1000 + epsilon
 }
 
 func NewGame() *Game {
 	game := &Game{}
-	game.GenerateToken()
+	game.Initialise()
+	game.Type = "whirligig"
 	game.State.Value = "start"
 	return game
 }
@@ -46,40 +49,69 @@ func (game *Game) Parse(fileStream io.Reader) error {
 	return nil
 }
 
-func (game *Game) ProcessCommand(method string, params map[string]any) (any, error) {
+func (game *Game) Tick(delta time.Duration) (*abstract.Command, error) {
 	game.Mutex.RLock()
 	defer game.Mutex.RUnlock()
 
+	if game.State.Value == "question_discussion" && !game.Timer.Paused {
+		previousTime := game.Timer.Time
+		game.Timer.Time -= delta.Milliseconds()
+		if previousTime == game.State.Item.GetTime() {
+			return &abstract.Command{"intercom", "timer_begin"}, nil
+		}
+		if game.State.Item.Type == "standard" && game.Timer.Time < 10*1000 && previousTime >= 10*1000 {
+			return &abstract.Command{"intercom", "timer_warning"}, nil
+		}
+		if game.Timer.Time < 0 && previousTime >= 0 {
+			return &abstract.Command{"intercom", "timer_end"}, nil
+		}
+		if game.Timer.Time < -epsilon {
+			return &abstract.Command{"game", game}, game.nextState("question_discussion")
+		}
+	}
+	return nil, nil
+}
+
+func (game *Game) ProcessCommand(method string, params map[string]any) (*abstract.Command, error) {
+	game.Mutex.RLock()
+	defer game.Mutex.RUnlock()
+
+	gameCommand := &abstract.Command{
+		Type:    "game",
+		Message: game,
+	}
+
 	switch method {
 	case "next":
-		from := params["from"].(*string)
-		return nil, game.nextState(from)
+		from, _ := params["from"].(string)
+		return gameCommand, game.nextState(from)
 	case "score":
-		connoisseurs, connoisseursOk := params["connoisseurs"].(int)
-		viewers, viewersOk := params["viewers"].(int)
+		connoisseurs, connoisseursOk := params["connoisseurs"].(float64)
+		viewers, viewersOk := params["viewers"].(float64)
 
 		if !connoisseursOk || !viewersOk {
 			return nil, abstract.InvalidInputs
 		}
-		game.Score.Connoisseurs = connoisseurs
-		game.Score.Viewers = viewers
-		return nil, nil
+		game.Score.Connoisseurs = int(connoisseurs)
+		game.Score.Viewers = int(viewers)
+		return gameCommand, nil
 	case "timer":
 		paused, ok := params["paused"].(bool)
 		if !ok {
 			return nil, abstract.InvalidInputs
 		}
-		return nil, game.changeTimer(paused)
+		game.Timer.Paused = paused
+		return gameCommand, nil
 	case "answer":
 		correct, ok := params["correct"].(bool)
 		if !ok {
 			return nil, abstract.InvalidInputs
 		}
-		return nil, game.answerCorrect(correct)
+		return gameCommand, game.answerCorrect(correct)
 	case "extraTime":
 		if game.State.Value == "answer" {
 			game.State.Value = "question_start"
-			return nil, game.nextState(nil)
+			return gameCommand, game.nextState("question_start")
 		}
 		return nil, abstract.NothingToDo
 	default:
@@ -87,8 +119,8 @@ func (game *Game) ProcessCommand(method string, params map[string]any) (any, err
 	}
 }
 
-func (game *Game) nextState(fromState *string) error {
-	if fromState != nil && game.State.Value != *fromState {
+func (game *Game) nextState(fromState string) error {
+	if fromState != "" && game.State.Value != fromState {
 		return abstract.NothingToDo
 	}
 
@@ -113,7 +145,6 @@ func (game *Game) nextState(fromState *string) error {
 			return errors.New("no item selected")
 		}
 		game.Timer.Paused = false
-		game.Timer.PausedTime = 0
 		game.Timer.Time = game.State.Item.GetTime()
 		game.State.Value = "question_discussion"
 	case "question_discussion":
@@ -128,34 +159,19 @@ func (game *Game) nextState(fromState *string) error {
 	return nil
 }
 
-func (game *Game) randomiseNextItem() (position int, item *Item, err error) {
-	position = rand.Intn(len(game.Items))
-	for index := range game.Items[position:] {
-		if !game.Items[index].IsProcessed {
-			return position, &game.Items[index], nil
+func (game *Game) randomiseNextItem() (int, *Item, error) {
+	position := rand.Intn(len(game.Items))
+	for _, item := range game.Items[position:] {
+		if !item.IsProcessed {
+			return position, &item, nil
 		}
 	}
-	for index := range game.Items[:position] {
-		if !game.Items[index].IsProcessed {
-			return position, &game.Items[index], nil
+	for _, item := range game.Items[:position] {
+		if !item.IsProcessed {
+			return position, &item, nil
 		}
 	}
 	return 0, nil, errors.New("no items left")
-}
-
-func (game *Game) changeTimer(paused bool) error {
-	if game.State.Value != "question_discussion" {
-		return abstract.NothingToDo
-	}
-	now := time.Now().UnixMilli()
-	if paused && !game.Timer.Paused {
-		game.Timer.PausedTime = now
-	} else if !paused && game.Timer.Paused {
-		game.Timer.Time += now - game.Timer.PausedTime
-		game.Timer.PausedTime = 0
-	}
-	game.Timer.Paused = paused
-	return nil
 }
 
 func (game *Game) hasUnprocessedItems() bool {

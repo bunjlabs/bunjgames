@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bunjgames/hub"
+	"bunjgames/server"
 	"bunjgames/storage"
 	"log"
 	"os"
@@ -10,13 +12,14 @@ func main() {
 	storage.CleanFolder("media")
 
 	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8000"
-	}
-
 	hostStaticFiles := os.Getenv("HOST_STATIC_FILES") == "true"
 	clientProxyUrl := os.Getenv("CLIENT_PROXY_URL")
 
+	store := storage.NewGameStore()
+	wsHub := hub.GetHub()
+
+	server.StartGameLoop(store, wsHub)
+
 	log.Printf("Server starting on :%s", port)
-	StartServer(port, hostStaticFiles, clientProxyUrl)
+	server.StartServer(store, wsHub, port, hostStaticFiles, clientProxyUrl)
 }
