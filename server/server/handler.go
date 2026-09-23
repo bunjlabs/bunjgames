@@ -2,6 +2,7 @@ package server
 
 import (
 	"bunjgames/game/abstract"
+	"bunjgames/game/deal"
 	"bunjgames/game/feud"
 	"bunjgames/game/jeopardy"
 	"bunjgames/game/weakest"
@@ -26,6 +27,8 @@ func newGame(name string) (abstract.Game, storage.ArchiveType) {
 		return weakest.NewGame(), storage.ArchiveNone
 	case "feud":
 		return feud.NewGame(), storage.ArchiveNone
+	case "deal":
+		return deal.NewGame(), storage.ArchiveNone
 	}
 	return nil, storage.ArchiveNone
 }

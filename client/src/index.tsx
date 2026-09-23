@@ -16,6 +16,8 @@ import WeakestClient from './weakest/Client';
 import FeudAdmin from './feud/Admin';
 import FeudView from './feud/View';
 import FeudClient from './feud/Client';
+import DealAdmin from './deal/Admin';
+import DealView from './deal/View';
 
 Howler.volume(0.5);
 
@@ -41,6 +43,9 @@ const App = () => (
         <Route path="/feud/admin" element={<FeudAdmin />} />
         <Route path="/feud/view" element={<FeudView />} />
         <Route path="/feud/client" element={<FeudClient />} />
+
+        <Route path="/deal/admin" element={<DealAdmin />} />
+        <Route path="/deal/view" element={<DealView />} />
       </Routes>
     </BrowserRouter>
   </React.StrictMode>

@@ -51,7 +51,6 @@ export default class GameApi {
         5000,
       );
       let reconnectCount = 5;
-      let connected = false;
 
       const doConnect = () => {
         this.socket = new WebSocket(this.wsEndpoint + token);
@@ -69,7 +68,6 @@ export default class GameApi {
               this.socket?.close();
               reject();
             } else {
-              connected = true;
               reconnectCount = 5;
               resolve();
             }

@@ -15,8 +15,8 @@ nginx proxy will be available at http://localhost:8080
 To build and run server:
 ```
 cd server
-go build bunjgames-server
-./bunjgames-server
+go build bunjgames
+./bunjgames
 ```
 
 To build (pull dependencies) and run client:
@@ -116,3 +116,17 @@ Legacy XML format is also supported:
    <score_multiplier>1</score_multiplier> <!-- integer, determines the score multiplyer -->
 </game>
 ~~~
+
+# Deal or No Deal
+
+YAML file with the following structure (content.yaml):
+~~~yaml
+- content: "present 1"  # short description
+- content: "present 2"
+  given: true  # boolean, optional, already eliminated
+- content: "present 3"
+  description: "present 3 description"  # string, optional, admin only
+- content: "present 4"
+~~~
+
+The minimum number of presents is 3, the minimum number of not given presents is 2.

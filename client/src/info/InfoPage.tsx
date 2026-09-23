@@ -41,6 +41,11 @@ export const MainPage: React.FC = () => (
       <div>The team with control of the question then tries to win the round by guessing all of the remaining concealed answers,
         with each member giving one answer in sequence.</div>
     </div>
+    <div style={{ padding: 16 }}>
+      <div style={{ fontSize: 22 }}><Link to="/deal/admin" style={linkStyle}>Deal or No Deal</Link></div>
+      <div>A contestant picks a case and progressively eliminates the remaining cases, deciding whether to keep
+        their prize or spin the wheel for a different one each round.</div>
+    </div>
   </PageShell>
 );
 
@@ -51,6 +56,7 @@ export const AdminPage: React.FC = () => (
       { name: 'Jeopardy', admin: '/jeopardy/admin', view: '/jeopardy/view' },
       { name: 'The Weakest', admin: '/weakest/admin', view: '/weakest/view' },
       { name: 'Friends Feud', admin: '/feud/admin', view: '/feud/view' },
+      { name: 'Deal or No Deal', admin: '/deal/admin', view: '/deal/view' },
     ].map((g) => (
       <div key={g.name} style={{ padding: 16 }}>
         <div style={{ fontSize: 22 }}>{g.name}:</div>
@@ -120,6 +126,16 @@ export const AboutPage: React.FC = () => (
       <div style={{ fontSize: 24 }}>Friends Feud game file specification:</div>
       <div style={{ marginBottom: 10 }} />
       <div>Coming soon...</div>
+    </div>
+
+    <div style={{ padding: 16 }}>
+      <div style={{ fontSize: 24 }}>Deal or No Deal game file specification:</div>
+      <div style={{ marginBottom: 10 }} />
+      <div>YAML file with the following structure (content.yaml):</div>
+      <div style={{ marginBottom: 10 }} />
+      <div style={{ paddingLeft: 40, whiteSpace: 'pre-wrap' }}>{'- content: "present 1"  # short description\n- content: "present 2"\n  given: true  # boolean, optional, already eliminated\n- content: "present 3"\n  description: "present 3 description"  # string, optional, admin only\n- content: "present 4"'}</div>
+      <div style={{ marginBottom: 10 }} />
+      <div>Minimum number of presents is 3, minimum number of not given presents is 2.</div>
     </div>
 
     <div style={{ padding: 16 }}>
