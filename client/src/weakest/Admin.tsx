@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FaVolumeMute } from 'react-icons/fa';
 
 import { Loading, Button, OvalButton, ButtonLink, VerticalList, ListItem, TwoLineListItem } from 'components/UI';
-import { useGame, useAuth, useTimer } from 'components/hooks';
+import { useGame, useAuth } from 'components/hooks';
 import { AdminAuth } from 'components/Auth';
 import {
   GameAdmin, AdminHeader, AdminContent, BlockContent, TextContent,
@@ -30,7 +30,9 @@ const Timer: React.FC<{ game: any }> = ({ game }) => {
     return () => clearInterval(timer);
   }, [game]);
 
-  return <TextContent>{Math.floor((time % 3600) / 60000)}:{Math.floor(time % 60) / 1000}</TextContent>;
+  const minutes = Math.floor(time / 60);
+  const seconds = Math.floor(time % 60);
+  return <TextContent>{minutes}:{seconds.toString().padStart(2, '0')}</TextContent>;
 };
 
 const Question: React.FC<{ game: any }> = ({ game }) => (

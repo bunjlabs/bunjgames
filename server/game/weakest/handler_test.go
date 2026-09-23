@@ -166,7 +166,8 @@ func TestGame(test *testing.T) {
 	_, err = game.Tick(4 * time.Second)
 	assert.Nil(test, err)
 	err = game.bank(false)
-	assert.NotNil(test, err)
+	assert.Nil(test, err)
+	assert.Equal(test, 6, game.RoundState.Bank)
 
 	err = game.bank(true)
 	assert.Nil(test, err)

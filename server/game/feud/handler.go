@@ -76,10 +76,11 @@ func (game *Game) RegisterPlayer(name string) error {
 		return errors.New("game is already in progress")
 	}
 	if len(game.Players) >= 2 {
-		game.Players[0] = &Player{Name: name}
-	} else {
-		game.Players = append(game.Players, &Player{Name: name})
+		game.Players[0] = game.Players[1]
+		game.Players[1] = &Player{Name: name}
+		return nil
 	}
+	game.Players = append(game.Players, &Player{Name: name})
 	return nil
 }
 
@@ -110,8 +111,11 @@ func (game *Game) ProcessCommand(method string, params map[string]any) (*abstrac
 		return gameCommand, game.setAnswerer(playerName)
 	case "answer":
 		isCorrect, ok1 := params["correct"].(bool)
+		if !ok1 {
+			return nil, abstract.InvalidInputs
+		}
 		answerIdx, ok2 := params["answerIndex"].(float64)
-		if !ok1 || !ok2 {
+		if isCorrect && !ok2 {
 			return nil, abstract.InvalidInputs
 		}
 		return gameCommand, game.answerQuestion(isCorrect, int(answerIdx))

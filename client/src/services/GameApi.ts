@@ -78,7 +78,7 @@ export default class GameApi {
         };
 
         this.socket.onclose = () => {
-          if (!connected || !this.hasToken()) {
+          if (!this.hasToken()) {
             reject();
           } else if (reconnectCount > 0) {
             reconnectCount -= 1;
@@ -87,7 +87,7 @@ export default class GameApi {
         };
 
         this.socket.onerror = () => {
-          reject();
+          this.socket?.close();
         };
       };
 

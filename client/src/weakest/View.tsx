@@ -47,7 +47,9 @@ const Timer: React.FC<{ game: any }> = ({ game }) => {
     return () => clearInterval(timer);
   }, [game]);
 
-  return <ViewTextContent>{Math.floor((time % 3600) / 60000)}:{Math.floor(time % 60) / 1000}</ViewTextContent>;
+  const minutes = Math.floor(time / 60);
+  const seconds = Math.floor(time % 60);
+  return <ViewTextContent>{minutes}:{seconds.toString().padStart(2, '0')}</ViewTextContent>;
 };
 
 const stateContent = (game: any) => {

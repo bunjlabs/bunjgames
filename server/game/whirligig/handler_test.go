@@ -90,7 +90,7 @@ func TestGame(test *testing.T) {
 
 	assert.Equal(test, game.Score, Score{Connoisseurs: 0, Viewers: 0})
 
-	_, err = game.ProcessCommand("score", map[string]any{"connoisseurs": 2, "viewers": 3})
+	_, err = game.ProcessCommand("score", map[string]any{"connoisseurs": float64(2), "viewers": float64(3)})
 	assert.Nil(test, err)
 	assert.Equal(test, game.Score, Score{Connoisseurs: 2, Viewers: 3})
 

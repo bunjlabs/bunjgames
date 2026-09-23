@@ -175,7 +175,7 @@ func (game *Game) nextState(fromState string) error {
 }
 
 func (game *Game) bank(force bool) error {
-	if game.State.Value != "questions" || (!force && game.RoundState.QuestionTime < 0) {
+	if game.State.Value != "questions" {
 		return abstract.NothingToDo
 	}
 	if game.RoundState.Answerer != nil {

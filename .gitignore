@@ -1,3 +1,8 @@
 .idea/
 */*.iml
 server/bunjgames-server
+
+# slops
+.claude/
+.cursor/
+.mcp.json

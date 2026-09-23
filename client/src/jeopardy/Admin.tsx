@@ -245,6 +245,7 @@ const JeopardyAdmin: React.FC = () => {
           <HorizontalList>
             {game.players?.map((p: any, i: number) => (
               <TwoLineListItem key={i} className={playerStyle(p).backgroundColor === 'var(--bg-select)' ? 'selected' : ''}
+                style={playerStyle(p)}
                 onClick={() => onPlayerSelect(p.name)}
               >
                 <div>{p.balance}</div>

@@ -128,7 +128,7 @@ func TestGame(test *testing.T) {
 	assert.Equal(test, game.Players[1], game.Answerer)
 
 	for i := range 4 {
-		_, err = game.ProcessCommand("answer", map[string]any{"correct": true, "answerIndex": i})
+		_, err = game.ProcessCommand("answer", map[string]any{"correct": true, "answerIndex": float64(i)})
 		assert.Nil(test, err)
 	}
 	assert.Equal(test, "answers_reveal", game.State)
@@ -148,7 +148,7 @@ func TestGame(test *testing.T) {
 	assert.Nil(test, err)
 
 	for i := range 4 {
-		_, err = game.ProcessCommand("answer", map[string]any{"correct": true, "answerIndex": i})
+		_, err = game.ProcessCommand("answer", map[string]any{"correct": true, "answerIndex": float64(i)})
 		assert.Nil(test, err)
 	}
 
@@ -220,8 +220,8 @@ func TestRegisterPlayerReplacement(test *testing.T) {
 	err = game.RegisterPlayer("TEAM3")
 	assert.Nil(test, err)
 	assert.Equal(test, 2, len(game.Players))
-	assert.Equal(test, "TEAM3", game.Players[0].Name)
-	assert.Equal(test, "TEAM2", game.Players[1].Name)
+	assert.Equal(test, "TEAM2", game.Players[0].Name)
+	assert.Equal(test, "TEAM3", game.Players[1].Name)
 
 	err = game.RegisterPlayer("TEAM2")
 	assert.Nil(test, err)
@@ -230,8 +230,8 @@ func TestRegisterPlayerReplacement(test *testing.T) {
 	err = game.RegisterPlayer("TEAM4")
 	assert.Nil(test, err)
 	assert.Equal(test, 2, len(game.Players))
-	assert.Equal(test, "TEAM4", game.Players[0].Name)
-	assert.Equal(test, "TEAM2", game.Players[1].Name)
+	assert.Equal(test, "TEAM3", game.Players[0].Name)
+	assert.Equal(test, "TEAM4", game.Players[1].Name)
 }
 
 func TestStrikesPassToOpponent(test *testing.T) {
@@ -289,7 +289,7 @@ func TestTick(test *testing.T) {
 	_, _ = game.ProcessCommand("setAnswerer", map[string]any{"player": "T1"})
 
 	for i := range 2 {
-		_, _ = game.ProcessCommand("answer", map[string]any{"correct": true, "answerIndex": i})
+		_, _ = game.ProcessCommand("answer", map[string]any{"correct": true, "answerIndex": float64(i)})
 	}
 
 	for game.State == "answers_reveal" {
