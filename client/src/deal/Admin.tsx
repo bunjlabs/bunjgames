@@ -22,19 +22,6 @@ const STATUS_NAMES: Record<string, string> = {
 
 const getStatusName = (s: string) => STATUS_NAMES[s] ?? '';
 
-const SelectedCase: React.FC<{ game: any }> = ({ game }) => {
-  const idx = game.state.selectedIndex;
-  const present = idx >= 0 ? game.presents[idx] : null;
-  return (
-    <div style={{ textAlign: 'center', padding: 12, minHeight: 80 }}>
-      <div style={{ fontSize: 20, color: 'var(--text)' }}>Selected case</div>
-      <div style={{ fontSize: 36, fontWeight: 'bold', color: 'var(--text)' }}>
-        {present && !present.given ? idx + 1 : ''}
-      </div>
-    </div>
-  );
-};
-
 const stateContent = (game: any, onOpenCase: (i: number) => void, onSelect: (i: number) => void) => {
   switch (game.state.value) {
     case 'round_start':
@@ -42,35 +29,24 @@ const stateContent = (game: any, onOpenCase: (i: number) => void, onSelect: (i: 
     case 'case_select':
       return <CasesTable game={game} showContent onSelect={onSelect} />;
     case 'haggle':
-      return (
-        <>
-          <CasesTable game={game} showContent onSelect={onOpenCase} />
-          <SelectedCase game={game} />
-        </>
-      );
+      return <CasesTable game={game} showContent onSelect={onOpenCase} />;
     case 'case_swap':
-      return (
-        <>
-          <CasesTable game={game} showContent />
-          <SelectedCase game={game} />
-        </>
-      );
+      return <CasesTable game={game} showContent />;
     case 'reveal':
-      return (
-        <TextContent>
-          {game.state.revealedIndex >= 0 && (
-            <>Case {game.state.revealedIndex + 1}: {game.presents[game.state.revealedIndex]?.content}</>
-          )}
-        </TextContent>
-      );
+      return <CasesTable game={game} showContent />;
     case 'wheel_start':
     case 'wheel_spin':
-      return <Wheel game={game} onStop={() => DEAL_API.nextState(game.state.value)} />;
+      return <Wheel game={game} onStop={() => {}} />;
     case 'round_end': {
+      if (game.state.chosenMoney) {
+        return (
+          <TextContent>Money</TextContent>
+        );
+      }
       const idx = game.state.wheelResultIndex >= 0 ? game.state.wheelResultIndex : game.state.revealedIndex;
       return (
         <TextContent>
-          {idx >= 0 && <>Case {idx + 1}: {game.presents[idx]?.content}</>}
+          {idx >= 0 && <> {idx + 1}: {game.presents[idx]?.content}</>}
         </TextContent>
       );
     }
@@ -96,11 +72,30 @@ const DealAdmin: React.FC = () => {
   const onNext = () => DEAL_API.nextState(state);
   const onSelect = (i: number) => DEAL_API.selectCase(i);
   const onOpenCase = (i: number) => DEAL_API.openCase(i);
+  const onRevealCase = (i: number) => DEAL_API.revealCase(i);
+  const onMoney = () => DEAL_API.chooseMoney();
+  const onShuffle = () => DEAL_API.shuffle();
+  const onBanker = () => DEAL_API.intercom('phone_ring');
+
+  const shuffleBtn = (
+    <Button
+      key="shuffle"
+      onClick={onShuffle}
+      style={{ fontSize: 14, padding: '4px 10px', marginRight: 24 }}
+    >
+      Shuffle
+    </Button>
+  );
 
   const controls: React.ReactNode[] = [];
-  if (state === 'round_start' || state === 'round_end') {
+  if (state === 'round_start' || state === 'round_end' || state === 'wheel_spin') {
     controls.push(<Button key="next" onClick={onNext}>Next</Button>);
+  } else if (state === 'case_select') {
+    controls.push(shuffleBtn);
+  } else if (state === 'haggle') {
+    controls.push(<Button key="banker" onClick={onBanker}>Banker</Button>);
   } else if (state === 'case_swap') {
+    controls.push(<Button key="banker" onClick={onBanker}>Banker</Button>);
     controls.push(<Button key="keep" onClick={() => DEAL_API.keep()}>Keep</Button>);
     controls.push(<Button key="switch" onClick={() => DEAL_API.switchCase()}>Switch</Button>);
   } else if (state === 'reveal') {
@@ -117,8 +112,8 @@ const DealAdmin: React.FC = () => {
         style={{ maxWidth: 200 }}
       >
         <option value={-1}>No cheat</option>
-        {available.map(({ i }) => (
-          <option key={i} value={i}>Case {i + 1}</option>
+        {available.map(({ p, i }) => (
+          <option key={i} value={i}>{p.content}</option>
         ))}
       </select>,
     );
@@ -133,13 +128,17 @@ const DealAdmin: React.FC = () => {
         <ButtonLink to="/deal/view">View</ButtonLink>
         <Button onClick={onLogout}>Logout</Button>
       </AdminHeader>
-      <AdminContent rightPanel={<PresentsList game={game} showDescription onClick={state === 'haggle' ? onOpenCase : undefined} />}>
+      <AdminContent rightPanel={<div style={{ padding: 8, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}><PresentsList game={game} showDescription onClick={(state === 'haggle' || state === 'case_swap') ? onRevealCase : undefined} onMoney={(state === 'haggle' || state === 'case_swap') ? onMoney : undefined} /></div>}>
         <BlockContent>
           {stateContent(game, onOpenCase, onSelect)}
         </BlockContent>
       </AdminContent>
       <AdminFooter>
-        <FooterItem style={{ fontSize: 30 }}>Round {game.state.round}</FooterItem>
+        <FooterItem style={{ fontSize: 30 }}>
+          {state === 'wheel_spin' && game.state.wheelResultIndex >= 0
+            ? game.presents[game.state.wheelResultIndex]?.content
+            : `Round ${game.state.round}`}
+        </FooterItem>
         <FooterItem>{controls}</FooterItem>
       </AdminFooter>
     </GameAdmin>

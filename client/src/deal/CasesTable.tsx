@@ -23,34 +23,52 @@ export const CasesTable: React.FC<{
 }> = ({ game, showContent, onSelect }) => {
   const presents = game.presents as any[];
 
-  const cells = presents.map((p: any, i: number) => {
+  const ordered = presents
+    .map((p: any, i: number) => ({ p, i }))
+    .filter(({ p }) => !p.given)
+    .sort((a, b) => a.p.order - b.p.order);
+
+  const count = ordered.length;
+  const columns = Math.min(count, Math.max(2, Math.ceil(Math.sqrt(count))));
+  const lastRowCount = count % columns;
+  const lastRowOffset = lastRowCount > 0 && lastRowCount < columns
+    ? Math.floor((columns - lastRowCount) / 2)
+    : 0;
+  const lastRowStart = count - lastRowCount;
+
+  const cells = ordered.map(({ p, i }, idx) => {
     const isGiven = p.given;
     const isSelected = p.selected;
     const isOpened = p.opened;
 
-    let label: React.ReactNode = i + 1;
+    let label: React.ReactNode = idx + 1;
     if (showContent && !isGiven && !isSelected && !isOpened) {
       label = (
         <>
-          <div>{i + 1}</div>
+          <div>{idx + 1}</div>
           <div style={{ fontSize: 14, fontWeight: 'normal' }}>{p.content}</div>
         </>
       );
     }
-    if (isOpened && !isGiven) {
+    if (showContent && isSelected) {
+      label = (
+        <>
+          <div>{idx + 1}</div>
+          <div style={{ fontSize: 14, fontWeight: 'normal' }}>{p.content}</div>
+        </>
+      );
+    }
+    if (isOpened && !isGiven && !isSelected) {
       label = (
         <div style={{ color: 'var(--text-gray)' }}>{p.content}</div>
       );
-    }
-    if (isSelected) {
-      label = null;
     }
     if (isGiven) {
       label = null;
     }
 
-    const blank = isGiven || isSelected;
     const clickable = onSelect && !isGiven && !isSelected && !isOpened;
+    const isLastRow = lastRowOffset > 0 && idx >= lastRowStart;
 
     return (
       <div
@@ -58,9 +76,11 @@ export const CasesTable: React.FC<{
         className={clickable ? 'clickable' : ''}
         style={{
           ...cellStyle,
-          backgroundColor: blank ? 'transparent' : isOpened ? 'var(--bg-button)' : 'var(--bg-dark)',
-          borderColor: blank ? 'transparent' : 'var(--bg-dark)',
+          backgroundColor: isSelected ? 'var(--text-value)' : isGiven ? 'var(--bg-button)' : isOpened ? 'var(--bg-button)' : 'var(--bg-dark)',
+          color: isSelected ? 'var(--text-select)' : 'var(--text)',
+          borderColor: isSelected ? 'var(--bg-dark)' : isGiven ? 'transparent' : 'var(--bg-dark)',
           cursor: clickable ? 'pointer' : 'default',
+          gridColumnStart: isLastRow ? idx - lastRowStart + 1 + lastRowOffset : undefined,
         }}
         onClick={() => clickable && onSelect?.(i)}
       >
@@ -73,8 +93,10 @@ export const CasesTable: React.FC<{
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))',
+        gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+        gridAutoRows: '1fr',
         gap: 10,
+        height: '100%',
         width: '100%',
       }}
     >

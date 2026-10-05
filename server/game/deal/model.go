@@ -10,6 +10,7 @@ type Present struct {
 	Given       bool   `json:"given" yaml:"given"`
 	Opened      bool   `json:"opened" yaml:"-"`
 	Selected    bool   `json:"selected" yaml:"-"`
+	Order       int    `json:"order" yaml:"-"`
 }
 
 type State struct {
@@ -18,6 +19,7 @@ type State struct {
 	RevealedIndex    int    `json:"revealedIndex"`
 	WheelResultIndex int    `json:"wheelResultIndex"`
 	CheatIndex       int    `json:"cheatIndex"`
+	ChosenMoney      bool   `json:"chosenMoney"`
 	Round            int    `json:"round"`
 }
 

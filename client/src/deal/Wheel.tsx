@@ -4,9 +4,10 @@ import Konva from 'konva';
 interface WheelProps {
   game: any;
   onStop: () => void;
+  onRespin?: () => void;
 }
 
-const Wheel: React.FC<WheelProps> = ({ game, onStop }) => {
+const Wheel: React.FC<WheelProps> = ({ game, onStop, onRespin }) => {
   const container = useRef<HTMLDivElement>(null);
   const spinning = game.state.value === 'wheel_spin';
 
@@ -21,50 +22,55 @@ const Wheel: React.FC<WheelProps> = ({ game, onStop }) => {
     const layer = new Konva.Layer();
 
     const available = (game.presents as any[]).map((p, i) => ({ p, i })).filter(({ p }) => !p.given);
-    const sectorAngle = (2.0 * Math.PI) / Math.max(available.length, 1);
+    const sectorAngleDeg = 360 / Math.max(available.length, 1);
     const radius = Math.min(width, height) / 2 - 20;
     const centerX = width / 2;
     const centerY = height / 2;
 
-    available.forEach(({ i }, k) => {
-      const angle = sectorAngle * k;
+    const wheelGroup = new Konva.Group({ x: centerX, y: centerY });
+
+    available.forEach(({ p }, k) => {
+      const start = -90 + k * sectorAngleDeg;
+      const mid = start + sectorAngleDeg / 2;
       const wedge = new Konva.Wedge({
-        x: centerX,
-        y: centerY,
+        x: 0,
+        y: 0,
         radius,
-        angle: (sectorAngle * 180) / Math.PI,
-        rotation: (angle * 180) / Math.PI,
-        fill: k % 2 === 0 ? 'var(--bg-button)' : '#535456',
-        stroke: 'var(--bg-dark)',
+        angle: sectorAngleDeg,
+        rotation: start,
+        fill: k % 2 === 0 ? '#535456' : '#333435',
+        stroke: '#707072',
         strokeWidth: 2,
       });
-      layer.add(wedge);
+      wheelGroup.add(wedge);
 
       const label = new Konva.Text({
-        x: centerX,
-        y: centerY,
-        text: String(i + 1),
+        x: 0,
+        y: 0,
+        text: String(p.content),
         fontSize: 18,
-        fill: 'var(--text)',
+        fill: '#ffffff',
         align: 'center',
         verticalAlign: 'middle',
       });
-      const mid = angle + sectorAngle / 2;
+      const midRad = (mid * Math.PI) / 180;
       label.position({
-        x: centerX + (radius * 0.7) * Math.cos(mid) - label.width() / 2,
-        y: centerY + (radius * 0.7) * Math.sin(mid) - label.height() / 2,
+        x: (radius * 0.7) * Math.cos(midRad) - label.width() / 2,
+        y: (radius * 0.7) * Math.sin(midRad) - label.height() / 2,
       });
-      layer.add(label);
+      wheelGroup.add(label);
     });
 
     const pointer = new Konva.Line({
       points: [
-        centerX, centerY - radius,
-        centerX, centerY - radius + 20,
+        centerX - 14, centerY - radius - 6,
+        centerX + 14, centerY - radius - 6,
+        centerX, centerY - radius + 14,
       ],
-      stroke: 'red',
-      strokeWidth: 6,
+      closed: true,
+      fill: '#ffffff',
     });
+    layer.add(wheelGroup);
     layer.add(pointer);
 
     stage.add(layer);
@@ -74,21 +80,54 @@ const Wheel: React.FC<WheelProps> = ({ game, onStop }) => {
     if (spinning) {
       const resultIndex = game.state.wheelResultIndex;
       const resultSector = available.findIndex(({ i }) => i === resultIndex);
-      const targetMid = (resultSector + 1.5) * sectorAngle;
+      const resultDeg = -(resultSector + 0.5) * sectorAngleDeg;
 
+      const cheat = game.state.cheatIndex >= 0;
       const laps = 5;
-      const totalAngle = laps * 2 * Math.PI + targetMid;
-      const duration = 4000;
+
+      // Phase 1 target: with a cheat we first stop near a non-result sector,
+      // then respin to the actual result.
+      const firstSector = cheat ? (resultSector === 0 ? 1 : 0) : resultSector;
+      const firstDeg = -(firstSector + 0.5) * sectorAngleDeg;
+      const firstAngle = laps * 360 + firstDeg;
+
+      const respin = 360 + (resultDeg - firstDeg);
+
+      const duration = 20000;
+      const firstDuration = cheat ? 16000 : duration;
+      const secondDuration = duration - firstDuration;
       const start = Date.now();
 
       animation = new Konva.Animation(() => {
         const elapsed = Date.now() - start;
-        const progress = Math.min(elapsed / duration, 1);
-        const eased = 1 - Math.pow(1 - progress, 3);
-        layer.rotation((totalAngle * eased * 180) / Math.PI);
-        if (progress >= 1) {
-          animation?.stop();
-          onStop();
+        if (!cheat) {
+          const progress = Math.min(elapsed / duration, 1);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          wheelGroup.rotation(firstAngle * eased);
+          if (progress >= 1) {
+            animation?.stop();
+            onStop();
+          }
+          return;
+        }
+
+        const phase = elapsed < firstDuration ? 1 : 2;
+        if (phase === 1) {
+          const progress = Math.min(elapsed / firstDuration, 1);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          wheelGroup.rotation(firstAngle * eased);
+          if (progress >= 1) {
+            onRespin?.();
+          }
+        } else {
+          // Respin to the cheat target.
+          const progress = Math.min((elapsed - firstDuration) / secondDuration, 1);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          wheelGroup.rotation(firstAngle + respin * eased);
+          if (progress >= 1) {
+            animation?.stop();
+            onStop();
+          }
         }
       }, layer);
       animation.start();
@@ -98,7 +137,7 @@ const Wheel: React.FC<WheelProps> = ({ game, onStop }) => {
       animation?.stop();
       stage.destroy();
     };
-  }, [game.state.value, game.state.wheelResultIndex, game.presents, spinning, onStop]);
+  }, [game.state.value, game.state.wheelResultIndex, game.state.cheatIndex, game.presents, spinning, onStop, onRespin]);
 
   return <div style={{ width: '100%', height: '100%', minHeight: 320 }} ref={container} />;
 };

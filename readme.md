@@ -9,6 +9,9 @@ docker run --name bunjgames-nginx \
     --volume ./server/media:/app/media:ro \
     --volume ./nginx.dev.conf:/etc/nginx/nginx.conf:ro \
     nginx
+
+# if already started
+docker start bunjgames-nginx
 ```
 nginx proxy will be available at http://localhost:8080
 

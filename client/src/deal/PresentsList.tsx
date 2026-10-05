@@ -5,6 +5,7 @@ const itemStyle: React.CSSProperties = {
   backgroundColor: 'var(--bg-dark)',
   color: 'var(--text)',
   fontSize: 20,
+  textAlign: 'center',
   whiteSpace: 'nowrap',
   overflow: 'hidden',
   textOverflow: 'ellipsis',
@@ -14,7 +15,8 @@ export const PresentsList: React.FC<{
   game: any;
   showDescription: boolean;
   onClick?: (index: number) => void;
-}> = ({ game, showDescription, onClick }) => {
+  onMoney?: () => void;
+}> = ({ game, showDescription, onClick, onMoney }) => {
   const presents = game.presents as any[];
 
   const items = presents
@@ -28,6 +30,7 @@ export const PresentsList: React.FC<{
           className={onClick ? 'clickable' : ''}
           style={{
             ...itemStyle,
+            marginBottom: 8,
             textDecoration: struck ? 'line-through' : 'none',
             cursor: onClick ? 'pointer' : 'default',
           }}
@@ -42,8 +45,20 @@ export const PresentsList: React.FC<{
     });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%' }}>
+    <div className="no-scrollbar" style={{ width: '100%', flex: '0 1 auto', minHeight: 0 }}>
       {items}
+      {onMoney && (
+        <>
+          <div style={{ borderTop: '2px solid var(--bg-button)', margin: '4px 0' }} />
+          <div
+            className="clickable"
+            style={{ ...itemStyle, cursor: 'pointer', fontWeight: 'bold' }}
+            onClick={onMoney}
+          >
+            Money
+          </div>
+        </>
+      )}
     </div>
   );
 };

@@ -34,6 +34,18 @@ export default class DealApi extends GameApi {
     this.execute('openCase', { index });
   }
 
+  revealCase(index: number) {
+    this.execute('revealCase', { index });
+  }
+
+  chooseMoney() {
+    this.execute('chooseMoney', {});
+  }
+
+  shuffle() {
+    this.execute('shuffle', {});
+  }
+
   keep() {
     this.execute('keep', {});
   }

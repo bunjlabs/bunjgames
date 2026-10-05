@@ -44,6 +44,10 @@ func (game *Game) Parse(fileStream io.Reader) error {
 		return errors.New("at least three presents are required")
 	}
 
+	for i := range presents {
+		presents[i].Order = i
+	}
+
 	notGiven := 0
 	for _, p := range presents {
 		if !p.Given {
@@ -91,6 +95,16 @@ func (game *Game) ProcessCommand(method string, params map[string]any) (*abstrac
 			return nil, abstract.InvalidInputs
 		}
 		return gameCommand, game.openCase(int(index))
+	case "revealCase":
+		index, ok := params["index"].(float64)
+		if !ok {
+			return nil, abstract.InvalidInputs
+		}
+		return gameCommand, game.revealCase(int(index))
+	case "chooseMoney":
+		return gameCommand, game.chooseMoney()
+	case "shuffle":
+		return gameCommand, game.shuffle()
 	case "keep":
 		return gameCommand, game.keep()
 	case "switch":
@@ -146,6 +160,7 @@ func (game *Game) startRound() {
 	game.State.RevealedIndex = -1
 	game.State.WheelResultIndex = -1
 	game.State.CheatIndex = -1
+	game.State.ChosenMoney = false
 	for i := range game.Presents {
 		game.Presents[i].Selected = false
 		game.Presents[i].Opened = false
@@ -225,9 +240,65 @@ func (game *Game) switchCase() error {
 	return nil
 }
 
+// revealCase selects the given case as the player's case and reveals it,
+// used when the admin clicks a present in the list during haggle/case_swap.
+func (game *Game) revealCase(index int) error {
+	if game.State.Value != "haggle" && game.State.Value != "case_swap" {
+		return abstract.NothingToDo
+	}
+	if index < 0 || index >= len(game.Presents) {
+		return abstract.InvalidInputs
+	}
+	if game.Presents[index].Given {
+		return abstract.InvalidInputs
+	}
+
+	if game.State.SelectedIndex >= 0 {
+		game.Presents[game.State.SelectedIndex].Selected = false
+	}
+	game.State.SelectedIndex = index
+	game.Presents[index].Selected = true
+
+	game.State.Value = "reveal"
+	game.reveal(index)
+	return nil
+}
+
+// chooseMoney clears the case selection and reveals a "Money" outcome instead.
+func (game *Game) chooseMoney() error {
+	if game.State.Value != "haggle" && game.State.Value != "case_swap" {
+		return abstract.NothingToDo
+	}
+
+	if game.State.SelectedIndex >= 0 {
+		game.Presents[game.State.SelectedIndex].Selected = false
+	}
+	game.State.SelectedIndex = -1
+	game.State.RevealedIndex = -1
+	game.State.ChosenMoney = true
+
+	game.State.Value = "reveal"
+	return nil
+}
+
+// shuffle reorders the not-given presents without changing the game state.
+// It is only allowed before a case is selected, since reshuffling afterwards
+// would move already-selected or already-opened cases.
+func (game *Game) shuffle() error {
+	if game.State.Value != "case_select" {
+		return abstract.NothingToDo
+	}
+	game.reshuffle()
+	return nil
+}
+
 func (game *Game) reveal(index int) {
 	game.State.RevealedIndex = index
-	game.Presents[index].Opened = true
+	for i := range game.Presents {
+		if !game.Presents[i].Given {
+			game.Presents[i].Opened = true
+		}
+	}
 }
 
 func (game *Game) keepGift() error {
@@ -271,9 +342,14 @@ func (game *Game) spin() error {
 		return abstract.InvalidInputs
 	}
 
-	result := available[rand.Intn(len(available))]
+	result := game.State.SelectedIndex
 	if game.State.CheatIndex >= 0 && !game.Presents[game.State.CheatIndex].Given {
 		result = game.State.CheatIndex
+	}
+	// When money was chosen there is no selected case; the wheel falls on a
+	// random still-available present instead.
+	if result < 0 || game.Presents[result].Given {
+		result = available[rand.Intn(len(available))]
 	}
 
 	game.State.WheelResultIndex = result
@@ -297,7 +373,8 @@ func (game *Game) reshuffle() {
 	indices := game.availableIndices()
 	for i := len(indices) - 1; i > 0; i-- {
 		j := rand.Intn(i + 1)
-		game.Presents[indices[i]], game.Presents[indices[j]] = game.Presents[indices[j]], game.Presents[indices[i]]
+		game.Presents[indices[i]].Order, game.Presents[indices[j]].Order =
+			game.Presents[indices[j]].Order, game.Presents[indices[i]].Order
 	}
 }
 

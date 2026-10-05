@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"bunjgames/game/abstract"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -149,6 +151,137 @@ func TestWheel(test *testing.T) {
 	_, _ = game.ProcessCommand("next", map[string]any{"from": "wheel_spin"})
 	assert.Equal(test, "round_end", game.State.Value)
 	assert.True(test, game.Presents[2].Given)
+}
+
+func TestRevealOpensAllCases(test *testing.T) {
+	test.Parallel()
+
+	game := NewGame()
+	err := game.Parse(strings.NewReader(generateYaml(4)))
+	assert.Nil(test, err)
+
+	_, _ = game.ProcessCommand("next", map[string]any{"from": "round_start"})
+	_, _ = game.ProcessCommand("selectCase", map[string]any{"index": float64(0)})
+	_, _ = game.ProcessCommand("openCase", map[string]any{"index": float64(1)})
+	_, _ = game.ProcessCommand("openCase", map[string]any{"index": float64(2)})
+	assert.Equal(test, "case_swap", game.State.Value)
+
+	_, _ = game.ProcessCommand("keep", map[string]any{})
+	assert.Equal(test, "reveal", game.State.Value)
+
+	for _, p := range game.Presents {
+		assert.True(test, p.Opened)
+	}
+	assert.True(test, game.Presents[0].Selected)
+}
+
+func TestRevealCase(test *testing.T) {
+	test.Parallel()
+
+	game := NewGame()
+	err := game.Parse(strings.NewReader(generateYaml(5)))
+	assert.Nil(test, err)
+
+	_, _ = game.ProcessCommand("next", map[string]any{"from": "round_start"})
+	_, _ = game.ProcessCommand("selectCase", map[string]any{"index": float64(0)})
+	assert.Equal(test, "haggle", game.State.Value)
+
+	_, _ = game.ProcessCommand("revealCase", map[string]any{"index": float64(3)})
+	assert.Equal(test, "reveal", game.State.Value)
+	assert.Equal(test, 3, game.State.SelectedIndex)
+	assert.True(test, game.Presents[3].Selected)
+	assert.False(test, game.Presents[0].Selected)
+}
+
+func TestChooseMoney(test *testing.T) {
+	test.Parallel()
+
+	game := NewGame()
+	err := game.Parse(strings.NewReader(generateYaml(5)))
+	assert.Nil(test, err)
+
+	_, _ = game.ProcessCommand("next", map[string]any{"from": "round_start"})
+	_, _ = game.ProcessCommand("selectCase", map[string]any{"index": float64(0)})
+	assert.Equal(test, "haggle", game.State.Value)
+
+	_, _ = game.ProcessCommand("chooseMoney", map[string]any{})
+	assert.Equal(test, "reveal", game.State.Value)
+	assert.Equal(test, -1, game.State.SelectedIndex)
+	assert.True(test, game.State.ChosenMoney)
+	assert.False(test, game.Presents[0].Selected)
+
+	// Keeping money should not mark anything given.
+	_, _ = game.ProcessCommand("keepGift", map[string]any{})
+	assert.Equal(test, "round_end", game.State.Value)
+	for _, p := range game.Presents {
+		assert.False(test, p.Given)
+	}
+}
+
+func TestChooseMoneyThenSpin(test *testing.T) {
+	test.Parallel()
+
+	game := NewGame()
+	err := game.Parse(strings.NewReader(generateYaml(5)))
+	assert.Nil(test, err)
+
+	_, _ = game.ProcessCommand("next", map[string]any{"from": "round_start"})
+	_, _ = game.ProcessCommand("selectCase", map[string]any{"index": float64(0)})
+	_, _ = game.ProcessCommand("chooseMoney", map[string]any{})
+	assert.Equal(test, "reveal", game.State.Value)
+
+	_, _ = game.ProcessCommand("spinWheel", map[string]any{})
+	assert.Equal(test, "wheel_start", game.State.Value)
+
+	_, _ = game.ProcessCommand("spin", map[string]any{})
+	assert.Equal(test, "wheel_spin", game.State.Value)
+	assert.True(test, game.State.WheelResultIndex >= 0)
+
+	_, _ = game.ProcessCommand("next", map[string]any{"from": "wheel_spin"})
+	assert.Equal(test, "round_end", game.State.Value)
+	assert.True(test, game.Presents[game.State.WheelResultIndex].Given)
+}
+
+func TestShuffle(test *testing.T) {
+	test.Parallel()
+
+	game := NewGame()
+	err := game.Parse(strings.NewReader(generateYaml(5)))
+	assert.Nil(test, err)
+
+	_, _ = game.ProcessCommand("next", map[string]any{"from": "round_start"})
+	assert.Equal(test, "case_select", game.State.Value)
+
+	before := make([]int, len(game.Presents))
+	for i, p := range game.Presents {
+		before[i] = p.Order
+	}
+
+	_, _ = game.ProcessCommand("shuffle", map[string]any{})
+	assert.Equal(test, "case_select", game.State.Value)
+
+	// Orders should still be a permutation of the same values.
+	after := make([]int, len(game.Presents))
+	for i, p := range game.Presents {
+		after[i] = p.Order
+	}
+	assert.ElementsMatch(test, before, after)
+
+	// Shuffle is disabled after a case is selected.
+	_, _ = game.ProcessCommand("selectCase", map[string]any{"index": float64(0)})
+	assert.Equal(test, "haggle", game.State.Value)
+	orders := make([]int, len(game.Presents))
+	for i, p := range game.Presents {
+		orders[i] = p.Order
+	}
+	_, err = game.ProcessCommand("shuffle", map[string]any{})
+	assert.Equal(test, abstract.NothingToDo, err)
+	for i, p := range game.Presents {
+		assert.Equal(test, orders[i], p.Order)
+	}
+
+	_, _ = game.ProcessCommand("revealCase", map[string]any{"index": float64(0)})
+	assert.Equal(test, "reveal", game.State.Value)
 }
 
 func TestGameEnd(test *testing.T) {
