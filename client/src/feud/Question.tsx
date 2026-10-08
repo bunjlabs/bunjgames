@@ -66,7 +66,7 @@ export const FinalQuestions: React.FC<{ game: any; className?: string }> = ({ ga
         {!q.isProcessed && q.text}
       </div>,
     );
-    const a = q.answers.length ? q.answers[0] : null;
+    const a = q.answers.find((ans: any) => ans.isFinalAnswered) || null;
     answers.push(
       <div key={`a_${i}`} style={{ ...cellBase, backgroundColor: 'var(--bg-dark)', color: 'var(--text)' }}>
         {!q.isProcessed && (a ? a.text : '-')}

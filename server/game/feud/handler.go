@@ -177,17 +177,12 @@ func (game *Game) nextState(fromState string) error {
 			} else {
 				game.State = "end"
 			}
-			game.Answerer.FinalScore = game.sumFinalAnsweredValues()
+			game.Answerer.FinalScore += game.sumFinalAnsweredValues()
 			for _, q := range game.FinalQuestions {
-				if q.IsProcessed {
-					q.IsProcessed = false
-				}
-			}
-			for _, q := range game.FinalQuestions {
+				q.IsProcessed = false
 				for _, a := range q.Answers {
-					if a.IsOpened {
-						a.IsOpened = false
-					}
+					a.IsOpened = false
+					a.IsFinalAnswered = false
 				}
 			}
 		} else {

@@ -130,11 +130,11 @@ func (game *Game) nextState(fromState string) error {
 	case "intro":
 		game.State.Value = "questions"
 	case "questions", "question_end":
-		randomIdx, item, err := game.randomiseNextItem()
+		landingIdx, _, item, err := game.randomiseNextItem()
 		if err != nil {
 			return err
 		}
-		game.State.WhirligigPosition = &randomIdx
+		game.State.WhirligigPosition = &landingIdx
 		game.State.Item = item
 		game.State.Question = &item.Questions[0]
 		game.State.Value = "question_whirligig"
@@ -159,19 +159,19 @@ func (game *Game) nextState(fromState string) error {
 	return nil
 }
 
-func (game *Game) randomiseNextItem() (int, *Item, error) {
-	position := rand.Intn(len(game.Items))
-	for _, item := range game.Items[position:] {
-		if !item.IsProcessed {
-			return position, &item, nil
+func (game *Game) randomiseNextItem() (int, int, *Item, error) {
+	landing := rand.Intn(len(game.Items))
+	for i := landing; i < len(game.Items); i++ {
+		if !game.Items[i].IsProcessed {
+			return landing, i, &game.Items[i], nil
 		}
 	}
-	for _, item := range game.Items[:position] {
-		if !item.IsProcessed {
-			return position, &item, nil
+	for i := 0; i < landing; i++ {
+		if !game.Items[i].IsProcessed {
+			return landing, i, &game.Items[i], nil
 		}
 	}
-	return 0, nil, errors.New("no items left")
+	return 0, 0, nil, errors.New("no items left")
 }
 
 func (game *Game) hasUnprocessedItems() bool {
@@ -202,6 +202,7 @@ func (game *Game) answerCorrect(isCorrect bool) error {
 		return nil
 	}
 
+	game.State.Item.IsProcessed = true
 	game.State.Item = nil
 	game.State.Question = nil
 	game.State.WhirligigPosition = nil
